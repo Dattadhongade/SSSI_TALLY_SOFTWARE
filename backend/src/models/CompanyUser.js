@@ -20,6 +20,13 @@ const CompanyUser = sequelize.define('CompanyUser', {
   status: {
     type: DataTypes.STRING,
     defaultValue: 'Active'
+  },
+  role: {
+    type: DataTypes.STRING,
+    defaultValue: 'User' // Admin, Accountant, Data Entry
+  },
+  permissions: {
+    type: DataTypes.TEXT, // Store as JSON string or use JSONB in Postgres
   }
 }, {
   timestamps: false,

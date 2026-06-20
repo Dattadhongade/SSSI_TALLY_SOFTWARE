@@ -20,6 +20,7 @@ const Company = sequelize.define('Company', {
   booksBeginningFrom: { type: DataTypes.DATEONLY, allowNull: false },
   gstin: { type: DataTypes.STRING },
   pan: { type: DataTypes.STRING },
+  tan: { type: DataTypes.STRING },
   cin: { type: DataTypes.STRING },
   // New fields for Logo and GST Details
   logo: { type: DataTypes.TEXT('long') }, // Base64 or URL

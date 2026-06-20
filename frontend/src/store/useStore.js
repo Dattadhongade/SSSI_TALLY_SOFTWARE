@@ -9,6 +9,8 @@ const useStore = create(
       selectedCompany: null,
       selectedFinancialYear: null,
       pageTitle: 'Gateway of SSSI',
+      gatewayView: 'gateway',
+      
       
       login: (user, token) => {
         localStorage.setItem('token', token);
@@ -20,6 +22,7 @@ const useStore = create(
       },
       selectCompany: (company, financialYear) => set({ selectedCompany: company, selectedFinancialYear: financialYear }),
       setPageTitle: (title) => set({ pageTitle: title }),
+      setGatewayView: (view) => set({ gatewayView: view }),
     }),
     {
       name: 'erp-store',

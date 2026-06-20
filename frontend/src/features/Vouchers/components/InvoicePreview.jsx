@@ -211,7 +211,7 @@ export default function InvoicePreview({
                 </div>
                 <div className="w-1/2 p-1">
                   <div className="text-xs text-gray-600">Dated</div>
-                  <div className="font-bold">{formData.date}</div>
+                  <div className="font-bold">{formData.date ? formData.date.split('-').reverse().join('-') : ''}</div>
                 </div>
               </div>
 
@@ -222,7 +222,7 @@ export default function InvoicePreview({
                 </div>
                 <div className="w-1/2 p-1 flex-1">
                   <div className="text-xs text-gray-600">Mode/Terms of Payment</div>
-                  <div className="font-bold">{formData.narration || '30 DAYS'}</div>
+                  <div className="font-bold">{dispatchDetails?.modeOfPayment || '30 DAYS'}</div>
                 </div>
               </div>
 
@@ -244,7 +244,7 @@ export default function InvoicePreview({
                 </div>
                 <div className="w-1/2 p-1">
                   <div className="text-xs text-gray-600">Dated</div>
-                  <div className="font-bold">{dispatchDetails?.orderDate}</div>
+                  <div className="font-bold">{dispatchDetails?.orderDate ? dispatchDetails.orderDate.split('-').reverse().join('-') : ''}</div>
                 </div>
               </div>
 
@@ -255,7 +255,7 @@ export default function InvoicePreview({
                 </div>
                 <div className="w-1/2 p-1">
                   <div className="text-xs text-gray-600">Delivery Note Date</div>
-                  <div className="font-bold">{formData.date}</div>
+                  <div className="font-bold">{formData.date ? formData.date.split('-').reverse().join('-') : ''}</div>
                 </div>
               </div>
 

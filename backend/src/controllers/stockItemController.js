@@ -8,6 +8,11 @@ const sanitizeData = (data) => {
   if (sanitized.openingQuantity === '') sanitized.openingQuantity = 0;
   if (sanitized.openingRate === '') sanitized.openingRate = 0;
   if (sanitized.openingValue === '') sanitized.openingValue = 0;
+  if (sanitized.purchaseRate === '') sanitized.purchaseRate = 0;
+  if (sanitized.salesRate === '') sanitized.salesRate = 0;
+  if (sanitized.reorderLevel === '') sanitized.reorderLevel = 0;
+  if (sanitized.minimumStock === '') sanitized.minimumStock = 0;
+  if (sanitized.maximumStock === '') sanitized.maximumStock = 0;
   return sanitized;
 };
 

@@ -44,7 +44,7 @@ export default function SelectCompany() {
         });
         
         if (rows.length === 0) {
-          navigate('/company'); // Auto redirect if none found
+          navigate('/company/create'); // Auto redirect if none found
           return;
         }
 
@@ -107,7 +107,7 @@ export default function SelectCompany() {
         </div>
         <div className="bg-gray-50 px-4 py-3 border-t border-tally-border flex justify-between">
           <Link 
-            to="/company" 
+            to="/company/create" 
             className="text-sm font-bold text-tally-blue hover:underline"
           >
             Create Company (F3)

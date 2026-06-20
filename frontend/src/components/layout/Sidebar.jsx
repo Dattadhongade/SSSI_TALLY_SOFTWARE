@@ -1,23 +1,11 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { 
-  Building2, Database, FileText, FolderOpen, ShieldCheck, ChevronDown, ChevronRight, LogOut 
+  Building2, Database, FileText, FolderOpen, ShieldCheck, ChevronDown, ChevronRight, LogOut
 } from 'lucide-react';
 
-export default function Sidebar({ isOpen, toggleSidebar }) {
-  const { selectedCompany, user, logout } = useStore();
-  const navigate = useNavigate();
-  const [openDropdown, setOpenDropdown] = useState(null);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  const toggleDropdown = (name) => {
-    setOpenDropdown(openDropdown === name ? null : name);
-  };
 
   const modules = [
     { 
@@ -32,10 +20,13 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
       name: 'Create', 
       icon: FolderOpen,
       subItems: [
+        { name: 'Account Group', path: '/masters/group/create' },
         { name: 'Ledger', path: '/masters/ledger/create' },
         { name: 'Currency', path: '/masters/currency/create' },
+        { name: 'Stock Group', path: '/inventory/group/create' },
         { name: 'Stock Item', path: '/inventory/item/create' },
         { name: 'Unit', path: '/inventory/unit/create' },
+        { name: 'Employee', path: '/payroll/employee' },
         { name: 'GST Registration', path: '/company/gst' },
       ]
     },
@@ -56,8 +47,10 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
       subItems: [
         { name: 'Contra', path: '/vouchers/contra', shortcut: 'F4' },
         { name: 'Payment', path: '/vouchers/payment', shortcut: 'F5' },
-        { name: 'Receipt', path: '/vouchers/receipt', shortcut: 'F6' },
-        { name: 'Journal', path: '/vouchers/journal', shortcut: 'F7' },
+        { name: 'Receipt (F6)', path: '/vouchers/receipt', shortcut: 'F6' },
+        { name: 'Journal (F7)', path: '/vouchers/journal', shortcut: 'F7' },
+        { name: 'Manufacturing (Alt+F7)', path: '/vouchers/manufacturing', shortcut: 'Alt+F7' },
+        { name: 'Payroll (Ctrl+F4)', path: '/vouchers/payroll', shortcut: 'Ctrl+F4' },
         { name: 'Sales', path: '/vouchers/sales', shortcut: 'F8' },
         { name: 'Purchase', path: '/vouchers/purchase', shortcut: 'F9' },
         { name: 'Other Vouchers', path: '/vouchers/other', shortcut: 'F10' },
@@ -70,14 +63,55 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
       name: 'Account Book', 
       icon: Database,
       subItems: [
+        { name: 'Balance Sheet', path: '/reports/financial/balance-sheet' },
+        { name: 'Profit & Loss A/c', path: '/reports/financial/profit-loss' },
+        { name: 'Trial Balance', path: '/reports/financial/trial-balance' },
         { name: 'Ledger', path: '/reports/account-book/ledger' },
         { name: 'Sales Module', path: '/reports/account-book/sales-module' },
-        { name: 'Purchase Registry', path: '/reports/account-book/purchase-registry' },
-        { name: 'Debit Note Registry', path: '/reports/account-book/debit-note' },
+        { name: 'Purchase Module', path: '/reports/account-book/purchase-module' },
+
+        { name: 'Debit Note Register', path: '/reports/account-book/debit-note' },
         { name: 'Credit Note Registry', path: '/reports/account-book/credit-note' },
+      ]
+    },
+    { 
+      name: 'GST Reports', 
+      icon: FileText,
+      subItems: [
+        { name: 'GSTR-1', path: '/reports/gst/gstr1' },
+        { name: 'GSTR-2', path: '/reports/gst/gstr2' },
+        { name: 'GSTR-3B', path: '/reports/gst/gstr3b' },
       ]
     }
   ];
+
+export default function Sidebar({ isOpen, toggleSidebar }) {
+  const { selectedCompany, user, logout } = useStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [prevPath, setPrevPath] = useState(location.pathname);
+
+  if (location.pathname !== prevPath) {
+    setPrevPath(location.pathname);
+    const activeModule = modules.find(m => 
+      m.subItems && m.subItems.some(sub => location.pathname.includes(sub.path))
+    );
+    if (activeModule) {
+      setOpenDropdown(activeModule.name);
+    }
+  }
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const toggleDropdown = (name) => {
+    setOpenDropdown(openDropdown === name ? null : name);
+  };
+
+
 
   return (
     <>

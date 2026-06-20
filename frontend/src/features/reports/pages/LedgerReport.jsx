@@ -1,28 +1,88 @@
 import { useState, useEffect } from 'react';
 import useStore from '../../../store/useStore';
+import api from '../../../services/API';
+import { voucherAPI } from '../../../services/voucherAPI';
 
 export default function LedgerReport() {
   const { setPageTitle } = useStore();
+  const [ledgers, setLedgers] = useState([]);
+  const [allVouchers, setAllVouchers] = useState([]);
+  const [selectedLedger, setSelectedLedger] = useState('');
   
   useEffect(() => {
     setPageTitle('Ledger Vouchers');
+    async function fetchData() {
+      try {
+        const [lRes, vRes] = await Promise.all([
+          api.get('/ledgers'),
+          voucherAPI.getAll()
+        ]);
+        setLedgers(lRes.data);
+        setAllVouchers(vRes.data);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    fetchData();
   }, [setPageTitle]);
 
-  const [selectedLedger, setSelectedLedger] = useState('');
+  const ledgerObj = ledgers.find(l => l.id == selectedLedger);
+  const openingBalance = ledgerObj ? parseFloat(ledgerObj.openingBalance) : 0;
+  const openingBalanceType = ledgerObj ? ledgerObj.balanceType : 'Dr';
 
-  // Mock ledgers list
-  const ledgers = [
-    { id: 1, name: 'Shree Ganesh Enterprises' },
-    { id: 2, name: 'Omkar Traders' },
-    { id: 3, name: 'HDFC Bank' },
-  ];
+  let runningBalance = openingBalanceType === 'Cr' ? -openingBalance : openingBalance;
+  
+  const transactions = [];
+  
+  if (openingBalance > 0) {
+    transactions.push({
+      id: 'open',
+      date: '1-Apr-2026',
+      particulars: 'Opening Balance',
+      vchType: '',
+      vchNo: '',
+      debit: openingBalanceType === 'Dr' ? openingBalance : 0,
+      credit: openingBalanceType === 'Cr' ? openingBalance : 0
+    });
+  }
 
-  // Mock transactions
-  const transactions = [
-    { id: 1, date: '1-Apr-2026', particulars: 'Opening Balance', vchType: '', vchNo: '', debit: 50000, credit: 0 },
-    { id: 2, date: '5-Apr-2026', particulars: 'Sales Account', vchType: 'Sales', vchNo: 'INV-001', debit: 25000, credit: 0 },
-    { id: 3, date: '10-Apr-2026', particulars: 'HDFC Bank', vchType: 'Receipt', vchNo: 'REC-001', debit: 0, credit: 40000 },
-  ];
+  if (selectedLedger) {
+    const filteredVouchers = allVouchers.filter(v => 
+      v.entries && v.entries.some(e => e.ledgerId == selectedLedger)
+    ).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+    filteredVouchers.forEach(v => {
+      const typeName = v.VoucherType ? v.VoucherType.name : '';
+      const myEntry = v.entries.find(e => e.ledgerId == selectedLedger);
+      if (!myEntry) return;
+
+      const dr = Number(myEntry.debitAmount) || 0;
+      const cr = Number(myEntry.creditAmount) || 0;
+      
+      const oppositeEntry = v.entries.find(e => e.ledgerId != selectedLedger && (e.debitAmount > 0 || e.creditAmount > 0));
+      let particulars = v.narration || typeName;
+      if (oppositeEntry) {
+         const oppLedger = ledgers.find(l => l.id == oppositeEntry.ledgerId);
+         if (oppLedger) particulars = oppLedger.name;
+      }
+
+      runningBalance += (dr - cr);
+
+      transactions.push({
+        id: v.id,
+        date: new Date(v.date).toLocaleDateString('en-GB'),
+        particulars,
+        vchType: typeName,
+        vchNo: v.voucherNumber,
+        debit: dr,
+        credit: cr
+      });
+    });
+  }
+
+  const totalDebit = transactions.reduce((sum, v) => sum + v.debit, 0);
+  const totalCredit = transactions.reduce((sum, v) => sum + v.credit, 0);
+  const grandTotal = Math.max(totalDebit, totalCredit + (totalDebit - totalCredit));
 
   const handlePrint = () => {
     window.print();
@@ -85,21 +145,20 @@ export default function LedgerReport() {
               ))}
             </tbody>
             <tfoot>
-              {/* Closing Balance Calculation */}
               <tr className="border-t border-tally-border print:bg-transparent">
                 <td colSpan="4" className="px-3 py-2 border-r border-tally-border text-right font-bold">By Closing Balance</td>
-                <td className="px-3 py-2 border-r border-tally-border text-right"></td>
+                <td className="px-3 py-2 border-r border-tally-border text-right">{runningBalance < 0 ? Math.abs(runningBalance).toFixed(2) : ''}</td>
                 <td className="px-3 py-2 text-right font-bold italic">
-                  {(transactions.reduce((sum, v) => sum + v.debit, 0) - transactions.reduce((sum, v) => sum + v.credit, 0)).toFixed(2)}
+                  {runningBalance > 0 ? runningBalance.toFixed(2) : ''}
                 </td>
               </tr>
               <tr className="bg-gray-50 font-bold border-t-2 border-double border-tally-border print:bg-transparent">
                 <td colSpan="4" className="px-3 py-2 border-r border-tally-border text-right">Grand Total</td>
                 <td className="px-3 py-2 border-r border-tally-border text-right">
-                  {Math.max(transactions.reduce((sum, v) => sum + v.debit, 0), transactions.reduce((sum, v) => sum + v.credit, 0) + (transactions.reduce((sum, v) => sum + v.debit, 0) - transactions.reduce((sum, v) => sum + v.credit, 0))).toFixed(2)}
+                  {(totalDebit + (runningBalance < 0 ? Math.abs(runningBalance) : 0)).toFixed(2)}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  {Math.max(transactions.reduce((sum, v) => sum + v.debit, 0), transactions.reduce((sum, v) => sum + v.credit, 0) + (transactions.reduce((sum, v) => sum + v.debit, 0) - transactions.reduce((sum, v) => sum + v.credit, 0))).toFixed(2)}
+                  {(totalCredit + (runningBalance > 0 ? runningBalance : 0)).toFixed(2)}
                 </td>
               </tr>
             </tfoot>

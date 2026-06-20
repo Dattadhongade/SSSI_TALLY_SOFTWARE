@@ -6,9 +6,16 @@ import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import Pagination from '../../components/common/Pagination';
 import SalesVoucher from '../Vouchers/SalesVoucher';
+import useStore from '../../store/useStore';
 
 export default function SalesModule() {
   const navigate = useNavigate();
+  const setPageTitle = useStore(state => state.setPageTitle);
+
+  useEffect(() => {
+    setPageTitle("SALES REGISTER");
+  }, [setPageTitle]);
+
   const [activeTab, setActiveTab] = useState('Tax Invoices');
   const [vouchers, setVouchers] = useState([]);
   const [ledgers, setLedgers] = useState([]);

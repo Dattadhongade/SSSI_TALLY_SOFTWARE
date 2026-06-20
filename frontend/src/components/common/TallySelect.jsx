@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { focusNextElement } from '../../utils/formNavigation';
 
 export default function TallySelect({ 
@@ -32,18 +32,21 @@ export default function TallySelect({
   }, [value, options]);
 
   // Combined options: add "CREATE" if provided
-  const displayOptions = createOption 
-    ? [{ id: 'CREATE', name: createOption.label, isCreate: true }, ...options]
-    : options;
+  const displayOptions = useMemo(() => {
+    return createOption 
+      ? [{ id: 'CREATE', name: createOption.label, isCreate: true }, ...options]
+      : options;
+  }, [createOption, options]);
 
   // Filter options based on search term
-  // If the user hasn't typed anything (or it matches the current selection perfectly), show all
-  const selectedOption = options.find(o => String(o.id) === String(value));
-  const isSearchMatchingSelected = selectedOption && selectedOption.name === searchTerm;
-  
-  const filteredOptions = isSearchMatchingSelected || !searchTerm
-    ? displayOptions 
-    : displayOptions.filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredOptions = useMemo(() => {
+    const selectedOption = options.find(o => String(o.id) === String(value));
+    const isSearchMatchingSelected = selectedOption && selectedOption.name === searchTerm;
+    
+    return isSearchMatchingSelected || !searchTerm
+      ? displayOptions 
+      : displayOptions.filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [displayOptions, options, value, searchTerm]);
 
   // Reset highlight when search changes or dropdown opens
   useEffect(() => {

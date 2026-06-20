@@ -5,8 +5,9 @@
  * @returns {boolean} true if it's the same state.
  */
 export const isIntraState = (companyState, partyState) => {
-  if (!companyState || !partyState) return true; // Default to local if missing
-  return companyState.trim().toLowerCase() === partyState.trim().toLowerCase();
+  const cState = (companyState || 'maharashtra').trim().toLowerCase();
+  const pState = (partyState || 'maharashtra').trim().toLowerCase();
+  return cState === pState;
 };
 
 /**

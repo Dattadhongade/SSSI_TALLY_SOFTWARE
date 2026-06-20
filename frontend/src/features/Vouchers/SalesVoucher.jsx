@@ -68,14 +68,21 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
     
     const fetchData = async () => {
       try {
-        const [ledgersRes, itemsRes, unitsRes, vouchersRes] = await Promise.all([
+        const [ledgersRes, itemsRes, unitsRes, vouchersRes, groupsRes] = await Promise.all([
           api.get('/ledgers'),
           api.get('/stockitems'),
           api.get('/units'),
-          voucherAPI.getAll()
+          voucherAPI.getAll(),
+          api.get('/account-groups').catch(() => ({ data: [] }))
         ]);
         
-        setLedgers(ledgersRes.data);
+        const groups = groupsRes.data || [];
+        const enrichedLedgers = ledgersRes.data.map(l => {
+          const group = groups.find(g => g.id === l.groupId);
+          return { ...l, parentGroup: group ? group.name : '' };
+        });
+
+        setLedgers(enrichedLedgers);
         setStockItems(itemsRes.data);
         setUnits(unitsRes.data);
 
@@ -101,7 +108,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
                 const party = ledgersRes.data.find(l => l.id === v.entries[0].ledgerId);
                 if (party) {
                   setFormData(prev => ({ ...prev, partyName: party.name }));
-                  setPartyDetails({
+                  const defaultParty = {
                     buyerName: party.name,
                     mailingName: party.alias || party.name,
                     address: party.address || '',
@@ -110,7 +117,23 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
                     gstType: party.registrationType || '',
                     gstin: party.gstin || '',
                     placeOfSupply: party.state || ''
-                  });
+                  };
+                  let savedPartyDetails = {};
+                  if (v.partyDetails) {
+                    try {
+                      savedPartyDetails = typeof v.partyDetails === 'string' ? JSON.parse(v.partyDetails) : v.partyDetails;
+                    } catch(e) {}
+                  }
+                  setPartyDetails({ ...defaultParty, ...savedPartyDetails });
+                }
+              }
+
+              if (v.dispatchDetails) {
+                try {
+                  const parsedDispatch = typeof v.dispatchDetails === 'string' ? JSON.parse(v.dispatchDetails) : v.dispatchDetails;
+                  setDispatchDetails(prev => ({ ...prev, ...parsedDispatch }));
+                } catch (e) {
+                  console.error('Failed to parse dispatch details', e);
                 }
               }
 
@@ -139,9 +162,15 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
               }
             }
           } else {
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            const startYear = currentMonth >= 4 ? currentYear : currentYear - 1;
+            const endYear = String(startYear + 1).slice(-2);
+            const financialYear = `${startYear}-${endYear}`;
+
             const salesCount = vouchersRes.data.filter(v => v.voucherTypeId === salesType.id).length;
             const nextNum = String(salesCount + 1).padStart(5, '0');
-            const generatedVoucherNumber = `SSSI/2026-27/${nextNum}`;
+            const generatedVoucherNumber = `SSSI/${financialYear}/${nextNum}`;
             
             setFormData(prev => ({ ...prev, voucherTypeId: salesType.id, voucherNumber: generatedVoucherNumber }));
           }
@@ -156,18 +185,41 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (showDispatchModal || showPartyModal) return;
+
       // Ctrl+A to save/preview
       if (e.ctrlKey && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault();
         setShowPreview(true);
       }
+      if (e.key === 'F2') {
+        e.preventDefault();
+        const dateInput = document.querySelector('input[name="date"]');
+        if (dateInput) {
+          dateInput.focus();
+          try { dateInput.showPicker(); } catch { /* ignore */ }
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [showDispatchModal, showPartyModal]);
 
-  const debtors = ledgers; 
-  const salesAccounts = ledgers; 
+  const debtors = ledgers.filter(l => {
+    const p = l.parentGroup?.toLowerCase() || '';
+    return p.includes('debtor') || p.includes('cash') || p.includes('bank');
+  });
+
+  const salesAccounts = ledgers.filter(l => {
+    const p = l.parentGroup?.toLowerCase() || '';
+    return p.includes('sales');
+  });
+
+  const taxAccounts = ledgers.filter(l => {
+    const p = l.parentGroup?.toLowerCase() || '';
+    const exclude = ['bank', 'cash', 'debtor', 'creditor', 'sales', 'purchase', 'stock'];
+    return !exclude.some(ex => p.includes(ex));
+  });
 
   // ----- HANDLERS -----
 
@@ -290,36 +342,106 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
 
   // Auto-calculate Tax Totals (Theoretical)
   useEffect(() => {
-    const calculateTotals = () => {
-      let totalTaxable = 0;
-      let totalCGST = 0;
-      let totalSGST = 0;
-      let totalIGST = 0;
+    let totalCGST = 0;
+    let totalSGST = 0;
+    let totalIGST = 0;
 
-      const companyState = activeCompany ? activeCompany.state : '';
-      const partyState = partyDetails.placeOfSupply || partyDetails.state || '';
-      const intra = isIntraState(companyState, partyState);
+    const companyState = activeCompany ? activeCompany.state : '';
+    const partyState = partyDetails.placeOfSupply || partyDetails.state || '';
+    const intra = isIntraState(companyState, partyState);
 
-      items.forEach(item => {
-        totalTaxable += Number(item.amount) || 0;
-        const tax = calculateGST(item.amount, item.gstRate, intra);
+    items.forEach(item => {
+      if (item.stockItemId && item.stockItemId !== 'END') {
+        const rate = Number(item.gstRate) || 18; // Default to 18% if missing
+        const tax = calculateGST(item.amount, rate, intra);
         totalCGST += tax.cgstAmount;
         totalSGST += tax.sgstAmount;
         totalIGST += tax.igstAmount;
-      });
+      }
+    });
 
-      const taxSum = totalCGST + totalSGST + totalIGST;
+    const taxSum = totalCGST + totalSGST + totalIGST;
+    
+    setTimeout(() => {
       setTaxTotals({ cgst: totalCGST, sgst: totalSGST, igst: totalIGST, totalTax: taxSum });
-      
-      // Calculate Grand Total including the custom tax rows user added
-      let userTaxSum = 0;
-      taxItems.forEach(t => userTaxSum += Number(t.amount) || 0);
 
+      // Auto-update or add tax items for CGST/SGST/IGST
+      setTaxItems(prev => {
+        let changed = false;
+        let newTaxes = [...prev];
+
+        // Find appropriate ledgers for taxes, preferring "Output" for sales
+        const getLedger = (keyword) => {
+          const matches = ledgers.filter(l => l.name.toLowerCase().includes(keyword));
+          const outputMatch = matches.find(l => l.name.toLowerCase().includes('output'));
+          return outputMatch || matches.find(l => !l.name.toLowerCase().includes('input')) || matches[0];
+        };
+
+        const cgstLedger = getLedger('cgst');
+        const sgstLedger = getLedger('sgst');
+        const igstLedger = getLedger('igst');
+
+        const upsertTax = (ledger, amount) => {
+          if (!ledger) return;
+          const existingIdx = newTaxes.findIndex(t => String(t.ledgerId) === String(ledger.id));
+          if (existingIdx >= 0) {
+            if (Number(newTaxes[existingIdx].amount) !== Number(amount)) {
+              newTaxes[existingIdx] = { ...newTaxes[existingIdx], amount };
+              changed = true;
+            }
+          } else {
+            const newRow = { ledgerId: ledger.id, ledgerName: ledger.name, amount };
+            const endIdx = newTaxes.findIndex(t => !t.ledgerId || t.ledgerId === 'END');
+            if (endIdx >= 0) {
+              newTaxes.splice(endIdx, 0, newRow);
+            } else {
+              newTaxes.push(newRow);
+            }
+            changed = true;
+          }
+        };
+
+        const removeTax = (ledger) => {
+          if (!ledger) return;
+          const existingIdx = newTaxes.findIndex(t => String(t.ledgerId) === String(ledger.id));
+          if (existingIdx >= 0) {
+            newTaxes.splice(existingIdx, 1);
+            changed = true;
+          }
+        };
+
+        if (totalCGST > 0) upsertTax(cgstLedger, totalCGST.toFixed(2)); else removeTax(cgstLedger);
+        if (totalSGST > 0) upsertTax(sgstLedger, totalSGST.toFixed(2)); else removeTax(sgstLedger);
+        if (totalIGST > 0) upsertTax(igstLedger, totalIGST.toFixed(2)); else removeTax(igstLedger);
+
+        if (newTaxes.length === 0 || (newTaxes[newTaxes.length - 1].ledgerId && newTaxes[newTaxes.length - 1].ledgerId !== 'END')) {
+          newTaxes.push({ ledgerId: '', ledgerName: '', amount: '' });
+          changed = true;
+        }
+
+        return changed ? newTaxes : prev;
+      });
+    }, 0);
+
+  }, [items, partyDetails, activeCompany, ledgers]);
+
+  useEffect(() => {
+    let totalTaxable = 0;
+    items.forEach(item => {
+      if (item.stockItemId && item.stockItemId !== 'END') {
+        totalTaxable += Number(item.amount) || 0;
+      }
+    });
+    let userTaxSum = 0;
+    taxItems.forEach(t => {
+      if (t.ledgerId && t.ledgerId !== 'END') {
+         userTaxSum += Number(t.amount) || 0;
+      }
+    });
+    setTimeout(() => {
       setGrandTotal(totalTaxable + userTaxSum);
-    };
-
-    calculateTotals();
-  }, [items, partyDetails, taxItems, activeCompany]);
+    }, 0);
+  }, [items, taxItems]);
 
   // ----- SUBMIT -----
 
@@ -381,6 +503,15 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
       voucherNumber: formData.voucherNumber,
       narration: formData.narration,
       totalAmount: totalAmount,
+      placeOfSupply: partyDetails.placeOfSupply,
+      eWayBillNo: dispatchDetails.deliveryNote || '', // Or specific eWayBill input
+      eWayBillDate: dispatchDetails.date || '',
+      transporterName: dispatchDetails.carrierName || '',
+      transporterGstin: '',
+      vehicleNumber: dispatchDetails.motorVehicleNo || '',
+      transportMode: 'Road',
+      dispatchDetails: dispatchDetails,
+      partyDetails: partyDetails,
       entries,
       inventoryEntries: validItems
     };
@@ -390,35 +521,44 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
         await voucherAPI.update(editVoucherId, payload);
       } else {
         await voucherAPI.create(payload);
+        // We need the ID to generate e-Way/e-Invoice. Wait, voucherAPI.create returns voucherNumber usually, 
+        // but let's assume it returns ID, or we fetch it. 
+        // A better approach: backend should auto-generate these, but we are simulating frontend calls.
+        // Actually, we can just show a success message since backend simulation expects voucherId.
       }
       
-      // TRIGGER PRINT (Wait for preview to render, or print current window)
-      window.print();
-      
-      Swal.fire({ icon: 'success', title: 'Saved & Printed', text: `Sales Voucher ${isEditMode ? 'updated' : 'created'}!`, timer: 1500, showConfirmButton: false });
-      
-      if (isEditMode) {
-        navigate('/reports/account-book/sales-module');
-        return;
-      }
+      setTimeout(() => {
+        // TRIGGER PRINT (Wait for preview to render, or print current window)
+        window.print();
+        
+        setTimeout(() => {
+          Swal.fire({ icon: 'success', title: 'Saved & Printed', text: `Sales Voucher ${isEditMode ? 'updated' : 'created'}!`, timer: 1500, showConfirmButton: false });
+        }, 500);
+        
+        if (isEditMode) {
+          navigate('/reports/account-book/sales-module');
+          return;
+        }
 
-      // Reset
-      setShowPreview(false);
-      setFormData(prev => {
-        const parts = prev.voucherNumber.split('/');
-        const currentNum = parseInt(parts.pop(), 10) || 0;
-        const nextNumStr = String(currentNum + 1).padStart(5, '0');
-        parts.push(nextNumStr);
-        return { 
-          ...prev, 
-          partyId: '', partyName: '', salesLedgerId: '', narration: '',
-          voucherNumber: parts.join('/')
-        };
-      });
-      setItems([{ stockItemId: '', itemName: '', description: '', hsnSac: '', quantity: '', rate: '', amount: 0, gstRate: 0, unitSymbol: '' }]);
-      setTaxItems([{ ledgerId: '', ledgerName: '', amount: 0 }]);
-      setTaxTotals({ cgst: 0, sgst: 0, igst: 0, totalTax: 0 });
-      setGrandTotal(0);
+        // Reset
+        setShowPreview(false);
+        setFormData(prev => {
+          const parts = prev.voucherNumber.split('/');
+          const currentNum = parseInt(parts.pop(), 10) || 0;
+          const nextNumStr = String(currentNum + 1).padStart(5, '0');
+          parts.push(nextNumStr);
+          return { 
+            ...prev, 
+            partyId: '', partyName: '', salesLedgerId: '', narration: '',
+            voucherNumber: parts.join('/')
+          };
+        });
+        setItems([{ stockItemId: '', itemName: '', description: '', hsnSac: '', quantity: '', rate: '', amount: 0, gstRate: 0, unitSymbol: '' }]);
+        setTaxItems([{ ledgerId: '', ledgerName: '', amount: 0 }]);
+        setTaxTotals({ cgst: 0, sgst: 0, igst: 0, totalTax: 0 });
+        setGrandTotal(0);
+      }, 100);
+
     } catch (err) {
       console.error(err);
       Swal.fire('Error', 'Failed to save voucher', 'error');
@@ -461,8 +601,24 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
       
       {/* Dispatch Details Modal */}
       {showDispatchModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-gray-500/20 flex items-center justify-center z-50">
-          <div className="bg-white border border-tally-border p-4 shadow-xl w-[600px] navigable-container" onKeyDown={handleEnterToNextField}>
+        <div className="fixed inset-0 backdrop-blur-sm bg-gray-500/20 flex items-center justify-center z-50 modal-open">
+          <div 
+            className="bg-white border border-tally-border p-4 shadow-xl w-[600px] navigable-container" 
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                setShowDispatchModal(false);
+                setTimeout(() => document.getElementById('salesLedgerId')?.focus(), 10);
+              } else if (e.ctrlKey && (e.key === 'a' || e.key === 'A')) {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowDispatchModal(false);
+                setShowPartyModal(true);
+              } else {
+                handleEnterToNextField(e);
+              }
+            }}
+          >
             <div className="font-bold text-center text-tally-blue mb-4 underline">Dispatch Details</div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <div className="flex justify-between"><span>Delivery Note No(s):</span> <input autoFocus name="deliveryNote" value={dispatchDetails.deliveryNote} onChange={handleDispatchChange} className="border border-tally-border px-1 focus:bg-tally-yellow focus:outline-none w-32" /></div>
@@ -497,13 +653,19 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
 
       {/* Party Details Modal */}
       {showPartyModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-gray-500/20 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-blur-sm bg-gray-500/20 flex items-center justify-center z-50 modal-open">
           <div 
             className="bg-white border border-tally-border p-4 shadow-xl w-[500px] navigable-container" 
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
+                e.stopPropagation();
                 setShowPartyModal(false);
                 setShowDispatchModal(true);
+              } else if (e.ctrlKey && (e.key === 'a' || e.key === 'A')) {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowPartyModal(false);
+                setTimeout(() => document.getElementById('salesLedgerId')?.focus(), 10);
               } else {
                 handleEnterToNextField(e);
               }
@@ -618,14 +780,14 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
                 <th className="py-1 px-2 text-right w-24">Quantity</th>
                 <th className="py-1 px-2 text-right w-24">Rate</th>
                 <th className="py-1 px-2 text-center w-16">per</th>
-                <th className="py-1 px-2 text-right w-32">Amount</th>
+                <th className="py-1 px-2 text-right w-48">Amount</th>
               </tr>
             </thead>
             <tbody>
               {/* ITEM ROWS */}
               {items.map((item, idx) => (
                 <tr key={idx} className="border-b border-gray-100 hover:bg-[#fcf8e3]">
-                  <td className="py-1 px-2 text-center text-gray-500 align-top">{item.stockItemId ? idx + 1 : ''}</td>
+                  <td className="py-1 px-2 text-center text-gray-500 align-top">{item.stockItemId && item.stockItemId !== 'END' ? idx + 1 : ''}</td>
                   <td className="py-1 px-2 flex flex-col">
                     <TallySelect 
                       name="stockItemId"
@@ -636,7 +798,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
                       placeholder="Select Item..."
                       className="w-full font-bold"
                     />
-                    {item.stockItemId && (
+                    {item.stockItemId && item.stockItemId !== 'END' && (
                       <input 
                         type="text" value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)}
                         placeholder="Description..." className="mt-1 text-xs italic bg-transparent focus:bg-white focus:outline-none border-b border-gray-300 w-[80%]"
@@ -644,17 +806,17 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
                     )}
                   </td>
                   <td className="py-1 px-2 align-top">
-                    {item.stockItemId && <input type="text" value={item.hsnSac || ''} onChange={e => handleItemChange(idx, 'hsnSac', e.target.value)} className="w-full bg-transparent focus:bg-white focus:outline-none" placeholder="HSN/SAC" />}
+                    {item.stockItemId && item.stockItemId !== 'END' && <input type="text" value={item.hsnSac || ''} onChange={e => handleItemChange(idx, 'hsnSac', e.target.value)} className="w-full bg-transparent focus:bg-white focus:outline-none" placeholder="HSN/SAC" />}
                   </td>
                   <td className="py-1 px-2 align-top">
-                    {item.stockItemId && <input type="number" value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', e.target.value)} className="w-full text-right bg-transparent focus:bg-white focus:outline-none" placeholder="0" />}
+                    {item.stockItemId && item.stockItemId !== 'END' && <input type="number" value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', e.target.value)} className="w-full text-right bg-transparent focus:bg-white focus:outline-none" placeholder="0" />}
                   </td>
                   <td className="py-1 px-2 align-top">
-                    {item.stockItemId && <input type="number" value={item.rate} onChange={e => handleItemChange(idx, 'rate', e.target.value)} className="w-full text-right bg-transparent focus:bg-white focus:outline-none" placeholder="0.00" />}
+                    {item.stockItemId && item.stockItemId !== 'END' && <input type="number" value={item.rate} onChange={e => handleItemChange(idx, 'rate', e.target.value)} className="w-full text-right bg-transparent focus:bg-white focus:outline-none" placeholder="0.00" />}
                   </td>
-                  <td className="py-1 px-2 text-center align-top text-gray-600">{item.stockItemId ? item.unitSymbol : ''}</td>
+                  <td className="py-1 px-2 text-center align-top text-gray-600">{item.stockItemId && item.stockItemId !== 'END' ? item.unitSymbol : ''}</td>
                   <td className="py-1 px-2 text-right font-bold align-top">
-                    {item.stockItemId && <input type="number" value={item.amount || ''} onChange={e => handleItemChange(idx, 'amount', e.target.value)} className="w-full text-right bg-transparent focus:bg-white focus:outline-none font-bold" placeholder="0.00" />}
+                    {item.stockItemId && item.stockItemId !== 'END' && <input type="number" value={item.amount || ''} onChange={e => handleItemChange(idx, 'amount', e.target.value)} className="w-full text-right bg-transparent focus:bg-white focus:outline-none font-bold" placeholder="0.00" />}
                   </td>
                 </tr>
               ))}
@@ -671,15 +833,15 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
                       name={`tax-ledger-${idx}`}
                       value={tax.ledgerId} 
                       onChange={e => handleTaxItemChange(idx, 'ledgerId', e.target.value)}
-                      options={[{ id: 'END', name: 'End of List' }, ...salesAccounts]}
+                      options={[{ id: 'END', name: 'End of List' }, ...taxAccounts]}
                       createOption={{ label: "Create New Ledger..." }}
                       placeholder="Select Tax/Ledger..."
                       className="w-[80%] font-bold italic"
                     />
                   </td>
-                  <td colSpan={3}></td>
+                  <td colSpan={4}></td>
                   <td className="py-1 px-2 text-right font-bold">
-                    <input type="number" value={tax.amount || ''} onChange={e => handleTaxItemChange(idx, 'amount', e.target.value)} className="w-full text-right bg-transparent focus:bg-white focus:outline-none font-bold" placeholder="0.00" />
+                    {tax.ledgerId && tax.ledgerId !== 'END' && <input type="number" value={tax.amount || ''} onChange={e => handleTaxItemChange(idx, 'amount', e.target.value)} className="w-full text-right bg-transparent focus:bg-white focus:outline-none font-bold" placeholder="0.00" />}
                   </td>
                 </tr>
               ))}

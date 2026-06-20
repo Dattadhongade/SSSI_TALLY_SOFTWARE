@@ -8,6 +8,7 @@
   --color-tally-yellow: #fdb614;
   --color-tally-border: #b8d4e9;
   --color-tally-bg: #ffffff;
+  --color-tally-white: #ffffff;
 }
 
 body {
@@ -29,4 +30,15 @@ button {
 .no-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
 }

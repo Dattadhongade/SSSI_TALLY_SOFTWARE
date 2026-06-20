@@ -16,6 +16,10 @@ const currencyRoutes = require('./routes/currencyRoutes');
 const unitRoutes = require('./routes/unitRoutes');
 const stockItemRoutes = require('./routes/stockItemRoutes');
 const voucherRoutes = require('./routes/voucherRoutes');
+const gstRoutes = require('./routes/gstRoutes');
+const accountGroupRoutes = require('./routes/accountGroupRoutes');
+const stockGroupRoutes = require('./routes/stockGroupRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
@@ -24,8 +28,12 @@ app.use('/api/currencies', currencyRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/stockitems', stockItemRoutes);
 app.use('/api/vouchers', voucherRoutes);
+app.use('/api/gst', gstRoutes);
+app.use('/api/account-groups', accountGroupRoutes);
+app.use('/api/stock-groups', stockGroupRoutes);
+app.use('/api/reports', reportRoutes);
 
-// Database Connection
+// Error Handling Middleware Connection
 const db = require('./models');
 const { sequelize } = require('./config/database');
 

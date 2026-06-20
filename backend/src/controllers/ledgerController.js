@@ -4,6 +4,10 @@ const sanitizeData = (data) => {
   const sanitized = { ...data };
   if (sanitized.groupId === '') sanitized.groupId = null;
   if (sanitized.openingBalance === '') sanitized.openingBalance = 0;
+  if (sanitized.creditPeriod === '') sanitized.creditPeriod = 0;
+  if (sanitized.creditLimit === '') sanitized.creditLimit = 0;
+  sanitized.interestCalculation = !!sanitized.interestCalculation;
+  sanitized.costCenterApplicable = !!sanitized.costCenterApplicable;
   return sanitized;
 };
 

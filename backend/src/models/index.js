@@ -14,6 +14,9 @@ const VoucherType = require('./VoucherType');
 const Voucher = require('./Voucher');
 const VoucherEntry = require('./VoucherEntry');
 const VoucherInventory = require('./VoucherInventory');
+const CostCenter = require('./CostCenter');
+const Employee = require('./Employee');
+const Payhead = require('./Payhead');
 
 // --- Associations ---
 
@@ -41,7 +44,7 @@ const addCommonFKs = (Model) => {
 };
 
 // Apply common FKs to masters and transactions
-const tables = [AccountGroup, Ledger, Unit, Currency, StockGroup, StockItem, VoucherType, Voucher, VoucherEntry, VoucherInventory];
+const tables = [AccountGroup, Ledger, Unit, Currency, StockGroup, StockItem, VoucherType, Voucher, VoucherEntry, VoucherInventory, CostCenter, Employee, Payhead];
 tables.forEach(addCommonFKs);
 
 // AccountGroup Hierarchy
@@ -96,5 +99,8 @@ module.exports = {
   VoucherType,
   Voucher,
   VoucherEntry,
-  VoucherInventory
+  VoucherInventory,
+  CostCenter,
+  Employee,
+  Payhead
 };

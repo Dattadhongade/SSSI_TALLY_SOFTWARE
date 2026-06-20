@@ -7,6 +7,10 @@ const Ledger = sequelize.define('Ledger', {
   alias: { type: DataTypes.STRING },
   openingBalance: { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },
   balanceType: { type: DataTypes.ENUM('Dr', 'Cr'), defaultValue: 'Dr' }, // Debit or Credit
+  creditPeriod: { type: DataTypes.INTEGER, defaultValue: 0 }, // in days
+  creditLimit: { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },
+  interestCalculation: { type: DataTypes.BOOLEAN, defaultValue: false },
+  costCenterApplicable: { type: DataTypes.BOOLEAN, defaultValue: false },
   // Mailing Details
   mailingName: { type: DataTypes.STRING },
   address: { type: DataTypes.TEXT },

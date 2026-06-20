@@ -28,17 +28,37 @@ exports.createVoucher = async (req, res) => {
       date,
       voucherNumber,
       narration,
-      totalAmount
+      totalAmount,
+      placeOfSupply: req.body.placeOfSupply,
+      isReverseCharge: req.body.isReverseCharge,
+      dispatchDetails: req.body.dispatchDetails ? JSON.stringify(req.body.dispatchDetails) : null,
+      partyDetails: req.body.partyDetails ? JSON.stringify(req.body.partyDetails) : null,
     }, { transaction: t });
 
     // Create Accounting Entries
     if (entries && entries.length > 0) {
-      const formattedEntries = entries.map(entry => ({
-        voucherId: voucher.id,
-        ledgerId: entry.ledgerId,
-        debitAmount: entry.debitAmount || 0,
-        creditAmount: entry.creditAmount || 0
-      }));
+      let totalDr = 0;
+      let totalCr = 0;
+      const formattedEntries = entries.map(entry => {
+        totalDr += Number(entry.debitAmount || 0);
+        totalCr += Number(entry.creditAmount || 0);
+        return {
+          voucherId: voucher.id,
+          ledgerId: entry.ledgerId,
+          debitAmount: entry.debitAmount || 0,
+          creditAmount: entry.creditAmount || 0,
+          taxableValue: entry.taxableValue || 0,
+          cgst: entry.cgst || 0,
+          sgst: entry.sgst || 0,
+          igst: entry.igst || 0,
+          cess: entry.cess || 0,
+        };
+      });
+
+      if (Math.abs(totalDr - totalCr) > 0.01) {
+        throw new Error(`Double entry validation failed. Total Debit (${totalDr}) does not equal Total Credit (${totalCr}).`);
+      }
+
       await VoucherEntry.bulkCreate(formattedEntries, { transaction: t });
     }
 
@@ -49,7 +69,9 @@ exports.createVoucher = async (req, res) => {
         stockItemId: inv.stockItemId,
         quantity: inv.quantity || 0,
         rate: inv.rate || 0,
-        amount: inv.amount || 0
+        amount: inv.amount || 0,
+        hsnSac: inv.hsnSac,
+        gstRate: inv.gstRate
       }));
       await VoucherInventory.bulkCreate(formattedInv, { transaction: t });
     }
@@ -65,7 +87,18 @@ exports.createVoucher = async (req, res) => {
 
 exports.getVouchers = async (req, res) => {
   try {
+    const { type } = req.query;
+    let whereClause = {};
+
+    if (type) {
+      const vType = await VoucherType.findOne({ where: { name: type } });
+      if (vType) {
+        whereClause.voucherTypeId = vType.id;
+      }
+    }
+
     const vouchers = await Voucher.findAll({
+      where: whereClause,
       include: [
         { model: VoucherType },
         { model: VoucherEntry, as: 'entries' },
@@ -96,16 +129,40 @@ exports.updateVoucher = async (req, res) => {
     const { id } = req.params;
     const { date, narration, entries, inventoryEntries, totalAmount } = req.body;
     
-    await Voucher.update({ date, narration, totalAmount }, { where: { id }, transaction: t });
+    await Voucher.update({ 
+      date, 
+      narration, 
+      totalAmount,
+      placeOfSupply: req.body.placeOfSupply,
+      isReverseCharge: req.body.isReverseCharge,
+      dispatchDetails: req.body.dispatchDetails ? JSON.stringify(req.body.dispatchDetails) : null,
+      partyDetails: req.body.partyDetails ? JSON.stringify(req.body.partyDetails) : null,
+    }, { where: { id }, transaction: t });
 
     await VoucherEntry.destroy({ where: { voucherId: id }, transaction: t });
     if (entries && entries.length > 0) {
-      const formattedEntries = entries.map(entry => ({
-        voucherId: id,
-        ledgerId: entry.ledgerId,
-        debitAmount: entry.debitAmount || 0,
-        creditAmount: entry.creditAmount || 0
-      }));
+      let totalDr = 0;
+      let totalCr = 0;
+      const formattedEntries = entries.map(entry => {
+        totalDr += Number(entry.debitAmount || 0);
+        totalCr += Number(entry.creditAmount || 0);
+        return {
+          voucherId: id,
+          ledgerId: entry.ledgerId,
+          debitAmount: entry.debitAmount || 0,
+          creditAmount: entry.creditAmount || 0,
+          taxableValue: entry.taxableValue || 0,
+          cgst: entry.cgst || 0,
+          sgst: entry.sgst || 0,
+          igst: entry.igst || 0,
+          cess: entry.cess || 0,
+        };
+      });
+
+      if (Math.abs(totalDr - totalCr) > 0.01) {
+        throw new Error(`Double entry validation failed. Total Debit (${totalDr}) does not equal Total Credit (${totalCr}).`);
+      }
+
       await VoucherEntry.bulkCreate(formattedEntries, { transaction: t });
     }
 
@@ -116,7 +173,9 @@ exports.updateVoucher = async (req, res) => {
         stockItemId: inv.stockItemId,
         quantity: inv.quantity || 0,
         rate: inv.rate || 0,
-        amount: inv.amount || 0
+        amount: inv.amount || 0,
+        hsnSac: inv.hsnSac,
+        gstRate: inv.gstRate
       }));
       await VoucherInventory.bulkCreate(formattedInv, { transaction: t });
     }
