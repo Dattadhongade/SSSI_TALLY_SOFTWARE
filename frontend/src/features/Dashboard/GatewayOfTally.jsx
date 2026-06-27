@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
+import { formatPeriodDate, formatCurrentDate } from '../../utils/dateUtils';
 
 export default function GatewayOfTally() {
-  const { setPageTitle, selectedCompany, gatewayView, setGatewayView } = useStore();
+  const { setPageTitle, selectedCompany, selectedFinancialYear, gatewayView, setGatewayView } = useStore();
   const navigate = useNavigate();
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [currentView, setCurrentView] = useState(gatewayView); // 'gateway', 'create', 'alter'
-  const [masterSelectedIdx, setMasterSelectedIdx] = useState(0);
+  const [currentView, setCurrentView] = useState(gatewayView || 'gateway');
 
   useEffect(() => {
-    setPageTitle(currentView === 'gateway' ? 'Gateway of Tally' : currentView === 'create' ? 'Master Creation' : 'Master Alteration');
+    let title = 'Gateway of Tally';
+    if (currentView === 'create') title = 'Master Creation';
+    else if (currentView === 'alter') title = 'Master Alteration';
+    else if (currentView === 'displayMore') title = 'Display More Reports';
+    else if (currentView === 'accountBooks') title = 'Account Books';
+    
+    setPageTitle(title);
     setGatewayView(currentView);
   }, [setPageTitle, currentView, setGatewayView]);
 
@@ -32,7 +38,7 @@ export default function GatewayOfTally() {
       { label: 'Trial Balance', shortcut: 'T', path: '/reports/financial/trial-balance' },
       { label: 'GST Reports', shortcut: 'O', path: '/reports/gst/gstr1' },
       { label: 'Purchase Register', shortcut: 'R', path: '/reports/purchase-register' },
-      { label: 'Display More Reports', shortcut: 'D', path: '/reports' }
+      { label: 'Display More Reports', shortcut: 'D', action: 'displayMore' }
     ]},
     { section: 'Payroll', items: [
       { label: 'Payroll Landing Page', shortcut: 'Y', path: '/payroll' }
@@ -64,58 +70,123 @@ export default function GatewayOfTally() {
     ]}
   ];
 
-  const flatMenu = menuItems.flatMap(m => m.items);
-  const flatMasterMenu = mastersList.flatMap(m => m.items);
+  const displayMoreItems = [
+    { section: 'ACCOUNTING', items: [
+      { label: 'Trial Balance', shortcut: 'T', path: '/reports/financial/trial-balance' },
+      { label: 'Day Book', shortcut: 'D', path: '/reports/daybook' },
+      { label: 'Cash Flow', shortcut: 'C', path: '' },
+      { label: 'Funds Flow', shortcut: 'F', path: '' },
+      { label: 'Account Books', shortcut: 'A', action: 'accountBooks' },
+      { label: 'Statements of Accounts', shortcut: 'S', path: '' }
+    ]},
+    { section: 'INVENTORY', items: [
+      { label: 'Inventory Books', shortcut: 'I', path: '' },
+      { label: 'Statements of Inventory', shortcut: 'E', path: '' }
+    ]},
+    { section: 'STATUTORY', items: [
+      { label: 'Statutory Reports', shortcut: 'O', path: '' }
+    ]},
+    { section: 'EXCEPTION', items: [
+      { label: 'Exception Reports', shortcut: 'X', path: '' },
+      { label: 'Analysis & Verification', shortcut: 'V', path: '' },
+      { label: 'Edit Log Summary', shortcut: 'L', path: '' }
+    ]},
+    { section: '', items: [
+      { label: 'Quit', shortcut: 'Q', action: 'quit' }
+    ]}
+  ];
+
+  const accountBooksItems = [
+    { section: 'SUMMARY', items: [
+      { label: 'Cash/Bank Book(s)', shortcut: 'C', path: '' },
+      { label: 'Ledger', shortcut: 'L', path: '/reports/account-book/ledger' },
+      { label: 'Group Summary', shortcut: 'G', path: '' },
+      { label: 'Group Vouchers', shortcut: 'V', path: '' }
+    ]},
+    { section: 'REGISTERS', items: [
+      { label: 'Contra Register', shortcut: 'T', path: '' },
+      { label: 'Payment Register', shortcut: 'Y', path: '' },
+      { label: 'Receipt Register', shortcut: 'R', path: '' },
+      { label: 'Sales Register', shortcut: 'S', path: '/reports/account-book/sales-module' },
+      { label: 'Purchase Register', shortcut: 'P', path: '/reports/account-book/purchase-module' },
+      { label: 'Journal Register', shortcut: 'J', path: '' },
+      { label: 'Debit Note Register', shortcut: 'D', path: '/reports/account-book/debit-note' },
+      { label: 'Credit Note Register', shortcut: 'E', path: '/reports/account-book/credit-note' },
+      { label: 'Voucher Clarification', shortcut: 'U', path: '' }
+    ]},
+    { section: '', items: [
+      { label: 'Quit', shortcut: 'Q', action: 'quit' }
+    ]}
+  ];
+
+  const getCurrentMenu = () => {
+    if (currentView === 'gateway') return menuItems;
+    if (currentView === 'displayMore') return displayMoreItems;
+    if (currentView === 'accountBooks') return accountBooksItems;
+    return mastersList;
+  };
+
+  const currentMenu = getCurrentMenu();
+  const flatMenu = currentMenu.flatMap(m => m.items);
+
+  const handleItemClick = useCallback((item) => {
+    if (currentView === 'create' || currentView === 'alter') {
+      const path = currentView === 'create' ? item.createPath : item.alterPath;
+      if (path) navigate(path);
+      else alert('Not implemented yet!');
+      return;
+    }
+
+    if (item.action === 'create') { setCurrentView('create'); setSelectedIdx(0); }
+    else if (item.action === 'alter') { setCurrentView('alter'); setSelectedIdx(0); }
+    else if (item.action === 'displayMore') { setCurrentView('displayMore'); setSelectedIdx(0); }
+    else if (item.action === 'accountBooks') { setCurrentView('accountBooks'); setSelectedIdx(0); }
+    else if (item.action === 'quit') {
+      if (currentView === 'accountBooks') { setCurrentView('displayMore'); setSelectedIdx(0); }
+      else if (currentView === 'displayMore') { setCurrentView('gateway'); setSelectedIdx(0); }
+      else alert('Quit is not available in web mode. Please logout.');
+    }
+    else if (item.path) { navigate(item.path); }
+  }, [currentView, navigate]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (currentView === 'gateway') {
-        if (e.key === 'ArrowDown') {
-          setSelectedIdx(prev => (prev + 1) % flatMenu.length);
-        } else if (e.key === 'ArrowUp') {
-          setSelectedIdx(prev => (prev - 1 + flatMenu.length) % flatMenu.length);
-        } else if (e.key === 'Enter') {
-          const item = flatMenu[selectedIdx];
-          if (item.action === 'create') setCurrentView('create');
-          else if (item.action === 'alter') setCurrentView('alter');
-          else if (item.path) navigate(item.path);
-          else if (item.action === 'quit') alert('Quit is not available in web mode. Please logout.');
-        } else {
-          const key = e.key.toUpperCase();
-          const matchedIndex = flatMenu.findIndex(i => i.shortcut === key);
-          if (matchedIndex !== -1) {
-            setSelectedIdx(matchedIndex);
-            const item = flatMenu[matchedIndex];
-            if (item.action === 'create') setCurrentView('create');
-            else if (item.action === 'alter') setCurrentView('alter');
-            else if (item.path) navigate(item.path);
-          }
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      
+      if (e.key === 'ArrowDown') {
+        setSelectedIdx(prev => (prev + 1) % flatMenu.length);
+      } else if (e.key === 'ArrowUp') {
+        setSelectedIdx(prev => (prev - 1 + flatMenu.length) % flatMenu.length);
+      } else if (e.key === 'Enter') {
+        const item = flatMenu[selectedIdx];
+        handleItemClick(item);
+      } else if (e.key === 'Escape') {
+        if (currentView === 'accountBooks') {
+          setCurrentView('displayMore');
+          setSelectedIdx(0);
+        } else if (currentView !== 'gateway') {
+          setCurrentView('gateway');
+          setSelectedIdx(0);
         }
       } else {
-        // Master List Navigation
-        if (e.key === 'ArrowDown') {
-          setMasterSelectedIdx(prev => (prev + 1) % flatMasterMenu.length);
-        } else if (e.key === 'ArrowUp') {
-          setMasterSelectedIdx(prev => (prev - 1 + flatMasterMenu.length) % flatMasterMenu.length);
-        } else if (e.key === 'Enter') {
-          const item = flatMasterMenu[masterSelectedIdx];
-          const path = currentView === 'create' ? item.createPath : item.alterPath;
-          if (path) navigate(path);
-          else alert('Not implemented yet!');
-        } else if (e.key === 'Escape') {
-          setCurrentView('gateway');
+        const key = e.key.toUpperCase();
+        if (currentView === 'create' || currentView === 'alter') return; // no letter shortcuts for masters list yet
+        const matchedIndex = flatMenu.findIndex(i => i.shortcut && i.shortcut.toUpperCase() === key);
+        if (matchedIndex !== -1) {
+          setSelectedIdx(matchedIndex);
+          handleItemClick(flatMenu[matchedIndex]);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentView, selectedIdx, masterSelectedIdx, navigate, flatMenu, flatMasterMenu]);
+  }, [currentView, selectedIdx, flatMenu, handleItemClick]);
 
   let globalIndex = 0;
 
   return (
-    <div className="text-tally-dark min-h-full font-sans flex flex-col lg:flex-row p-1 lg:p-2 gap-2 lg:gap-4">
+    <div className="text-tally-dark h-[80vh] font-sans flex flex-col lg:flex-row p-1 lg:p-2 gap-2 lg:gap-4 overflow-hidden">
       {/* Left Pane: Company Info */}
       <div className="flex-1 bg-white border border-tally-border flex flex-col shadow-sm">
          <div className="bg-tally-blue text-white font-bold p-2 text-center text-sm border-b border-tally-border">
@@ -125,15 +196,17 @@ export default function GatewayOfTally() {
            <div className="font-bold text-lg text-tally-blue">
              {selectedCompany ? selectedCompany.name : 'No Company Selected'}
            </div>
-           {selectedCompany && (
+           {selectedCompany && selectedFinancialYear && (
              <div className="text-sm mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
-                 <div className="font-bold">Current Period</div>
-                 <div className="text-gray-600">1-Apr-2026 to 31-Mar-2027</div>
+                 <div className="font-bold text-[#1c385c] text-[10px] uppercase tracking-wider mb-1">Current Period</div>
+                 <div className="text-black font-bold text-[13px]">
+                   {formatPeriodDate(selectedFinancialYear.startDate || selectedFinancialYear.start_date)} to {formatPeriodDate(selectedFinancialYear.endDate || selectedFinancialYear.end_date)}
+                 </div>
                </div>
-               <div>
-                 <div className="font-bold">Current Date</div>
-                 <div className="text-gray-600">Saturday, 6 Jun 2026</div>
+               <div className="text-right">
+                 <div className="font-bold text-[#1c385c] text-[10px] uppercase tracking-wider mb-1">Current Date</div>
+                 <div className="text-black font-bold text-[13px]">{formatCurrentDate(new Date())}</div>
                </div>
              </div>
            )}
@@ -144,84 +217,67 @@ export default function GatewayOfTally() {
       </div>
 
       {/* Right Pane: Menu */}
-      <div className="w-full lg:w-[400px] shrink-0 bg-white border border-tally-border flex flex-col shadow-sm">
-        <div className="bg-[#1c385c] text-white font-bold p-2 flex justify-between text-sm border-b border-tally-border">
-           <span>{currentView === 'gateway' ? 'Gateway of Tally' : 'List of Masters'}</span>
-           {currentView !== 'gateway' && <span className="text-gray-300 font-normal text-xs">{currentView === 'create' ? 'Master Creation' : 'Master Alteration'}</span>}
+      <div className="w-full lg:w-[350px] shrink-0 bg-white border border-tally-border flex flex-col shadow-sm">
+        <div className="bg-[#1c385c] text-white font-bold p-1 text-center text-[11px] border-b border-tally-border flex flex-col uppercase tracking-wide">
+           {currentView === 'accountBooks' && <span className="text-tally-yellow italic capitalize">Gateway of Tally</span>}
+           {(currentView === 'displayMore' || currentView === 'accountBooks') && <span className="text-tally-yellow italic capitalize">{currentView === 'accountBooks' ? 'Display More Reports' : 'Gateway of Tally'}</span>}
+           <span>
+             {currentView === 'gateway' ? 'Gateway of Tally' : 
+              currentView === 'displayMore' ? 'Display More Reports' : 
+              currentView === 'accountBooks' ? 'Account Books' : 'List of Masters'}
+           </span>
         </div>
         
-        {currentView === 'gateway' ? (
-          <div className="flex-1 overflow-auto">
-            {menuItems.map((section, sIdx) => (
-              <div key={sIdx} className="mb-2">
-                 <div className="text-center font-bold text-xs text-tally-blue py-1 uppercase tracking-widest bg-gray-50 border-y border-gray-200">
+        <div className="flex-1 overflow-y-hidden bg-[#eef5f9]">
+          {currentMenu.map((section, sIdx) => (
+            <div key={sIdx} className="mb-0">
+               {section.section && (
+                 <div className={`${currentView === 'gateway' ? 'text-center font-bold text-[10px] text-tally-blue py-0.5 uppercase tracking-widest my-0' : 'text-[9px] text-tally-blue uppercase font-bold px-4 pt-1 pb-0 opacity-80'}`}>
                    {section.section}
                  </div>
-                 <div className="flex flex-col">
-                   {section.items.map((item) => {
-                     const currentIndex = globalIndex++;
-                     const isSelected = currentIndex === selectedIdx;
-                     const labelParts = item.label.split(new RegExp(`(${item.shortcut})`, 'i'));
-                     let shortcutFound = false;
-
+               )}
+               <div className="flex flex-col">
+                 {section.items.map((item) => {
+                   const currentIndex = globalIndex++;
+                   const isSelected = currentIndex === selectedIdx;
+                   
+                   if (currentView === 'create' || currentView === 'alter') {
                      return (
                        <div 
                          key={item.label}
-                         onClick={() => { 
-                           setSelectedIdx(currentIndex); 
-                           if (item.action === 'create') setCurrentView('create');
-                           else if (item.action === 'alter') setCurrentView('alter');
-                           else if (item.path) navigate(item.path); 
-                         }}
-                         className={`px-8 py-1 cursor-pointer font-bold text-sm flex items-center justify-between transition-colors ${isSelected ? 'bg-tally-yellow text-tally-dark' : 'hover:bg-tally-yellow text-tally-dark'}`}
-                       >
-                         <span>
-                           {labelParts.map((part, i) => {
-                             if (!shortcutFound && part.toUpperCase() === item.shortcut) {
-                               shortcutFound = true;
-                               return <span key={i} className="text-tally-red text-lg underline">{part}</span>;
-                             }
-                             return part;
-                           })}
-                         </span>
-                       </div>
-                     );
-                   })}
-                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex-1 overflow-auto bg-tally-light-blue pb-4">
-            {mastersList.map((section, sIdx) => (
-              <div key={sIdx} className="mb-1">
-                 <div className="px-4 font-bold text-xs text-tally-dark py-1">
-                   {section.section}
-                 </div>
-                 <div className="flex flex-col">
-                   {section.items.map((item) => {
-                     const currentIndex = globalIndex++;
-                     const isSelected = currentIndex === masterSelectedIdx;
-
-                     return (
-                       <div 
-                         key={item.label}
-                         onClick={() => { 
-                           setMasterSelectedIdx(currentIndex); 
-                           const path = currentView === 'create' ? item.createPath : item.alterPath;
-                           if (path) navigate(path);
-                         }}
-                         className={`px-8 py-1 cursor-pointer text-sm transition-colors ${isSelected ? 'bg-tally-yellow font-bold text-tally-dark' : 'text-tally-dark hover:bg-tally-yellow hover:font-bold'}`}
+                         onClick={() => { setSelectedIdx(currentIndex); handleItemClick(item); }}
+                         className={`px-6 py-0.5 cursor-pointer text-[12px] transition-colors ${isSelected ? 'bg-tally-yellow font-bold text-black' : 'text-tally-dark hover:bg-tally-yellow hover:font-bold'}`}
                        >
                          {item.label}
                        </div>
                      );
-                   })}
-                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+                   }
+
+                   const labelParts = item.label.split(new RegExp(`(${item.shortcut})`, 'i'));
+                   let shortcutFound = false;
+
+                   return (
+                     <div 
+                       key={item.label}
+                       onClick={() => { setSelectedIdx(currentIndex); handleItemClick(item); }}
+                       className={`px-6 py-0.5 cursor-pointer font-bold text-[12px] flex items-center justify-between transition-colors ${isSelected ? 'bg-tally-yellow text-black' : 'hover:bg-[#e0eaf1] text-tally-dark'}`}
+                     >
+                       <span>
+                         {labelParts.map((part, i) => {
+                           if (!shortcutFound && part.toUpperCase() === item.shortcut) {
+                             shortcutFound = true;
+                             return <span key={i} className="text-tally-blue font-bold text-[13px] underline">{part}</span>;
+                           }
+                           return part;
+                         })}
+                       </span>
+                     </div>
+                   );
+                 })}
+               </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

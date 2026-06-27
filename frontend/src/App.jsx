@@ -87,8 +87,15 @@ function App() {
             <Route path="inventory/unit/alter" element={<AlterList title="Unit" endpoint="/api/units" editPathPrefix="/inventory/unit/edit" displayField="symbol" secondaryField="formalName" />} />
             
             {/* Vouchers */}
+            <Route path="reports/financial/balance-sheet" element={<BalanceSheet />} />
+            
             <Route path="vouchers/sales" element={<SalesVoucher />} />
             <Route path="vouchers/purchase" element={<PurchaseVoucher />} />
+            <Route path="vouchers/receipt" element={<ReceiptVoucher />} />
+            <Route path="vouchers/payment" element={<PaymentVoucher />} />
+            <Route path="vouchers/contra" element={<ContraVoucher />} />
+            <Route path="vouchers/journal" element={<JournalVoucher />} />
+            <Route path="vouchers/manufacturing" element={<ManufacturingJournal />} />
             
             {/* Payroll */}
             <Route path="payroll" element={<PayrollLanding />} />

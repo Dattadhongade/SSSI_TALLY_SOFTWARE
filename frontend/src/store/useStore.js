@@ -26,6 +26,7 @@ const useStore = create(
     }),
     {
       name: 'erp-store',
+      partialize: (state) => ({ user: state.user, token: state.token, selectedCompany: state.selectedCompany, selectedFinancialYear: state.selectedFinancialYear }),
     }
   )
 );

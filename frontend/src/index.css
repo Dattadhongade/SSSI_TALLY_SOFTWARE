@@ -9,6 +9,7 @@
   --color-tally-border: #b8d4e9;
   --color-tally-bg: #ffffff;
   --color-tally-white: #ffffff;
+  --color-tally-green: #2e8b57;
 }
 
 body {
@@ -41,4 +42,5 @@ input[type="number"]::-webkit-outer-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield; /* Firefox */
+  appearance: textfield;
 }

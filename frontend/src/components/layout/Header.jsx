@@ -1,3 +1,4 @@
+import { formatDateStr } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { Menu, Search, Home, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -25,7 +26,7 @@ export default function Header({ toggleSidebar }) {
           return;
         }
         if (location.pathname !== '/') {
-           navigate(-1);
+           navigate('/');
         }
       }
     };
@@ -46,9 +47,9 @@ export default function Header({ toggleSidebar }) {
         {/* Back and Home Buttons */}
         <div className="flex items-center space-x-2 mr-4">
           <button 
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/')}
             className="p-1.5 rounded-full bg-white text-tally-blue hover:bg-tally-yellow hover:text-tally-dark transition-colors"
-            title="Go Back"
+            title="Gateway of Tally"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -114,7 +115,7 @@ export default function Header({ toggleSidebar }) {
         </div>
         <div>
           <span className="font-semibold block text-right text-tally-white text-[10px] uppercase">Current Date</span>
-          <span className="font-bold">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+          <span className="font-bold">{formatDateStr(new Date())}</span>
         </div>
       </div>
     </header>

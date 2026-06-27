@@ -18,6 +18,7 @@ export default function TallySelect({
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  const isSelectingRef = useRef(false);
 
   // When value changes externally (or internally), update the search term to match the selected name
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function TallySelect({
   }, [value, options]);
 
   const handleSelect = (option) => {
+    isSelectingRef.current = true;
     setIsOpen(false);
     setSearchTerm(option.name);
     // Call onChange with a mock event object
@@ -86,6 +88,7 @@ export default function TallySelect({
           focusNextElement(inputRef.current);
         }
       }
+      setTimeout(() => { isSelectingRef.current = false; }, 200);
     }, 10); // Small delay to let React process state
   };
 
@@ -151,6 +154,7 @@ export default function TallySelect({
         }}
         onBlur={(e) => {
           if (containerRef.current && !containerRef.current.contains(e.relatedTarget)) {
+            if (isSelectingRef.current) return;
             setIsOpen(false);
             const current = options.find(o => String(o.id) === String(value));
             setTimeout(() => setSearchTerm(current ? current.name : ""), 0);
@@ -169,7 +173,7 @@ export default function TallySelect({
             filteredOptions.map((option, idx) => (
               <li
                 key={option.id}
-                onClick={() => handleSelect(option)}
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(option); }}
                 className={`px-3 py-1 cursor-pointer text-sm font-bold truncate ${
                   highlightedIndex === idx ? 'bg-tally-yellow text-tally-blue' : 'text-gray-800 hover:bg-gray-100'
                 } ${option.isCreate ? 'text-tally-blue border-b border-gray-200 mb-1' : ''}`}

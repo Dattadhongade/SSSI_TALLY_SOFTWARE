@@ -1,3 +1,4 @@
+import { formatDateStr , getLocalISODate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import useStore from '../../store/useStore';
 import { voucherAPI } from '../../services/voucherAPI';
@@ -8,8 +9,8 @@ export default function Daybook() {
   const [loading, setLoading] = useState(true);
 
   // Date range filter
-  const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0]);
-  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
+  const [fromDate, setFromDate] = useState(getLocalISODate());
+  const [toDate, setToDate] = useState(getLocalISODate());
 
   useEffect(() => {
     setPageTitle('Daybook');
@@ -82,7 +83,7 @@ export default function Daybook() {
 
                   return (
                     <tr key={v.id} className="border-b border-gray-100 hover:bg-[#fcf8e3] cursor-pointer">
-                      <td className="py-1 px-2">{new Date(v.date).toLocaleDateString('en-GB')}</td>
+                      <td className="py-1 px-2">{formatDateStr(v.date)}</td>
                       <td className="py-1 px-2 font-bold truncate max-w-xs" title={v.narration || typeName}>
                         {v.narration || `${typeName} Voucher`}
                       </td>

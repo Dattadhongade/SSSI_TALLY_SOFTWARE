@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import useStore from '../../../store/useStore';
 import Swal from 'sweetalert2';
+import { formatPeriodDate } from '../../../utils/dateUtils';
 
 export default function SelectCompany() {
   const [companyRows, setCompanyRows] = useState([]);
@@ -97,7 +98,7 @@ export default function SelectCompany() {
                   >
                     <span className="flex-1 uppercase">{row.company.name}</span>
                     <span className="w-48 text-right text-gray-600 font-medium">
-                      {row.financialYear ? `${row.financialYear.start_date} to ${row.financialYear.end_date}` : 'No FY'}
+                      {row.financialYear ? `${formatPeriodDate(row.financialYear.startDate || row.financialYear.start_date)} to ${formatPeriodDate(row.financialYear.endDate || row.financialYear.end_date)}` : 'No FY'}
                     </span>
                   </button>
                 </li>

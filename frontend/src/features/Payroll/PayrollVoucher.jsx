@@ -1,3 +1,4 @@
+import { getLocalISODate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import useStore from '../../store/useStore';
 import Swal from 'sweetalert2';
@@ -6,7 +7,7 @@ export default function PayrollVoucher() {
   const { setPageTitle } = useStore();
   
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalISODate(),
     voucherNumber: 'PAY/26-27/001',
     employeeId: '',
     narration: ''

@@ -1,3 +1,4 @@
+import { formatDateStr , getLocalISODate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 
 import useStore from '../../store/useStore';
@@ -13,7 +14,7 @@ export default function JournalVoucher() {
   
   const [formData, setFormData] = useState({
     voucherTypeId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalISODate(),
     voucherNumber: '',
     narration: '',
   });
@@ -150,7 +151,7 @@ export default function JournalVoucher() {
             </div>
           </div>
           <div className="text-right">
-            <div className="font-bold">{new Date(formData.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+            <div className="font-bold">{formatDateStr(formData.date)}</div>
             <input type="date" name="date" value={formData.date} onChange={handleFormChange} className="mt-1 border border-gray-300 text-xs px-1" />
           </div>
         </div>

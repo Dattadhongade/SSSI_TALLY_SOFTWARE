@@ -1,3 +1,4 @@
+import { formatDateStr } from '../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Printer, FileDown, Edit, Trash2, Plus, Calendar, Eye } from 'lucide-react';
 import { voucherAPI } from '../../services/voucherAPI';
@@ -337,12 +338,12 @@ export default function SalesModule() {
               return (
                 <tr key={v.id} className="border-b border-tally-border hover:bg-tally-yellow hover:bg-opacity-20 transition-colors">
                   <td className="p-2 border-r border-tally-border font-bold text-tally-blue">{v.voucherNumber}</td>
-                  <td className="p-2 border-r border-tally-border">{new Date(v.date).toLocaleDateString('en-GB')}</td>
+                  <td className="p-2 border-r border-tally-border">{formatDateStr(v.date)}</td>
                   <td className="p-2 border-r border-tally-border font-bold">{getCustomerName(v)}</td>
                   <td className="p-2 border-r border-tally-border">{taxable.toFixed(2)}</td>
                   <td className="p-2 border-r border-tally-border">{gst.toFixed(2)}</td>
                   <td className="p-2 border-r border-tally-border font-bold">{Number(v.totalAmount).toFixed(2)}</td>
-                  <td className="p-2 border-r border-tally-border">{new Date(v.date).toLocaleDateString('en-GB')}</td>
+                  <td className="p-2 border-r border-tally-border">{formatDateStr(v.date)}</td>
                   <td className="p-2 border-r border-tally-border text-center">
                     <span className="bg-red-100 text-red-700 border border-red-300 px-2 py-0.5 rounded font-bold">Unpaid</span>
                   </td>

@@ -1,3 +1,4 @@
+import { formatDateStr , getLocalISODate } from '../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import useStore from '../../store/useStore';
 import api from '../../services/API';
@@ -11,7 +12,7 @@ export default function BankReconciliation() {
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+    endDate: getLocalISODate()
   });
 
   const fetchBankLedgers = useCallback(async () => {
@@ -154,7 +155,7 @@ export default function BankReconciliation() {
               ) : (
                 entries.map((entry, idx) => (
                   <tr key={entry.entryId} className="border-b border-gray-100 hover:bg-[#fcf8e3]">
-                    <td className="p-2">{new Date(entry.date).toLocaleDateString('en-GB')}</td>
+                    <td className="p-2">{formatDateStr(entry.date)}</td>
                     <td className="p-2 font-bold">{entry.particulars}</td>
                     <td className="p-2">Payment/Receipt</td>
                     <td className="p-2">

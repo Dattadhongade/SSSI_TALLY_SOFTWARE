@@ -1,3 +1,4 @@
+import { formatDateStr , getLocalISODate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
@@ -30,7 +31,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
   
   const [formData, setFormData] = useState({
     voucherTypeId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalISODate(),
     voucherNumber: '',
     partyId: '',
     partyName: '',
@@ -48,7 +49,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
 
   const [dispatchDetails, setDispatchDetails] = useState({
     deliveryNote: '', dispatchDocNo: '', dispatchedThrough: '', destination: '',
-    carrierName: '', billOfLading: '', motorVehicleNo: '', date: new Date().toISOString().split('T')[0],
+    carrierName: '', billOfLading: '', motorVehicleNo: '', date: getLocalISODate(),
     modeOfPayment: '30 DAYS', otherReferences: '', buyersOrderNo: '', buyersOrderDate: '', termsOfDelivery: ''
   });
 
@@ -708,7 +709,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="font-bold text-tally-blue">{new Date(formData.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+            <div className="font-bold text-tally-blue">{formatDateStr(formData.date)}</div>
             <div className="text-sm text-gray-600 italic">{new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })}</div>
             <input type="date" name="date" value={formData.date} onChange={handleFormChange} className="bg-transparent border border-transparent focus:bg-tally-yellow focus:outline-none text-sm px-1 cursor-pointer" />
           </div>

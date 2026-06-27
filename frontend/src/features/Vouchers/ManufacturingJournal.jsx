@@ -1,3 +1,4 @@
+import { getLocalISODate } from '../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import useStore from '../../store/useStore';
 import api from '../../services/API';
@@ -8,7 +9,7 @@ export default function ManufacturingJournal() {
   const [stockItems, setStockItems] = useState([]);
   
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalISODate(),
     voucherNumber: 'MFG/26-27/001',
     productId: '',
     quantityProduced: 1,

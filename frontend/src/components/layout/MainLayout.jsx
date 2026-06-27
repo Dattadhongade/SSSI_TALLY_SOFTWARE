@@ -23,7 +23,7 @@ export default function MainLayout() {
         // Don't go back if we are already on the root dashboard (Gateway of Tally)
         if (location.pathname !== '/') {
           e.preventDefault();
-          navigate(-1);
+          navigate('/');
         }
       }
     };

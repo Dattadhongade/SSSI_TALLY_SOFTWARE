@@ -1,3 +1,4 @@
+import { formatDateStr , getLocalISODate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useStore from '../../store/useStore';
@@ -27,10 +28,10 @@ export default function PurchaseVoucher() {
   
   const [formData, setFormData] = useState({
     voucherTypeId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalISODate(),
     voucherNumber: '',
     supplierInvoiceNo: '',
-    supplierDate: new Date().toISOString().split('T')[0],
+    supplierDate: getLocalISODate(),
     partyId: '',
     purchaseLedgerId: '',
     narration: '',
@@ -45,7 +46,7 @@ export default function PurchaseVoucher() {
 
   const [receiptDetails, setReceiptDetails] = useState({
     receiptNote: '', receiptDocNo: '', dispatchedThrough: '', destination: '',
-    carrierName: '', billOfLading: '', date: new Date().toISOString().split('T')[0],
+    carrierName: '', billOfLading: '', date: getLocalISODate(),
     motorVehicleNo: ''
   });
 
@@ -82,7 +83,7 @@ export default function PurchaseVoucher() {
                 date: v.date.split('T')[0],
                 voucherNumber: v.voucherNumber,
                 supplierInvoiceNo: v.referenceNumber || '',
-                supplierDate: v.referenceDate ? v.referenceDate.split('T')[0] : new Date().toISOString().split('T')[0],
+                supplierDate: v.referenceDate ? v.referenceDate.split('T')[0] : getLocalISODate(),
                 partyId: v.entries?.[1]?.ledgerId || '',
                 purchaseLedgerId: v.entries?.[0]?.ledgerId || '',
                 narration: v.narration || '',
@@ -496,7 +497,7 @@ export default function PurchaseVoucher() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="font-bold text-tally-blue">{new Date(formData.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+            <div className="font-bold text-tally-blue">{formatDateStr(formData.date)}</div>
             <div className="text-sm text-gray-600 italic">{new Date(formData.date).toLocaleDateString('en-GB', { weekday: 'long' })}</div>
             <input type="date" name="date" value={formData.date} onChange={handleFormChange} className="bg-transparent border border-transparent focus:bg-tally-yellow focus:outline-none text-sm px-1 cursor-pointer" />
           </div>

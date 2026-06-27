@@ -16,10 +16,14 @@ exports.createVoucher = async (req, res) => {
     let voucherNumber = req.body.voucherNumber;
 
     if (vType.methodOfVoucherNumbering === 'Automatic') {
-      const count = await Voucher.count({ where: { voucherTypeId } });
-      const nextNum = (vType.startingNumber || 1) + count;
-      const numStr = String(nextNum).padStart(4, '0');
-      voucherNumber = `${vType.prefix || ''}${numStr}${vType.suffix || ''}`;
+      if (!req.body.voucherNumber) {
+        const count = await Voucher.count({ where: { voucherTypeId } });
+        const nextNum = (vType.startingNumber || 1) + count;
+        const numStr = String(nextNum).padStart(4, '0');
+        voucherNumber = `${vType.prefix || ''}${numStr}${vType.suffix || ''}`;
+      } else {
+        voucherNumber = req.body.voucherNumber;
+      }
     }
 
     // Create Voucher Header

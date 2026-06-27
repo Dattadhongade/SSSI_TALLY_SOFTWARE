@@ -1,3 +1,4 @@
+import { getLocalISODate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import useStore from '../../store/useStore';
 import api from '../../services/API';
@@ -10,7 +11,7 @@ export default function GSTR3BReport() {
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+    endDate: getLocalISODate()
   });
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { formatDateStr } from '../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import useStore from '../../store/useStore';
 import api from '../../services/API';
@@ -104,7 +105,7 @@ export default function PurchaseRegister() {
                 
                 return (
                   <tr key={v.id} className="border-b border-blue-100 hover:bg-[#fcf8e3] transition-colors">
-                    <td className="p-3 border-r border-blue-100">{new Date(v.date).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}).replace(/ /g, '-')}</td>
+                    <td className="p-3 border-r border-blue-100">{formatDateStr(v.date)}</td>
                     <td className="p-3 border-r border-blue-100 font-bold italic text-gray-800">{partyName}</td>
                     <td className="p-3 border-r border-blue-100 text-center">{v.VoucherType?.name || 'Purchase'}</td>
                     <td className="p-3 border-r border-blue-100 text-center">{v.voucherNumber}</td>
