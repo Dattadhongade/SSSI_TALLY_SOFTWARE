@@ -10,6 +10,7 @@ router.post('/', companyController.createCompany);
 router.get('/', companyController.getCompanies);
 router.get('/:id', companyController.getCompanyById);
 router.get('/:id/financial-years', companyController.getFinancialYears);
+router.put('/:id', companyController.updateCompany);
 router.put('/:id/gst', companyController.updateGstDetails);
 
 module.exports = router;

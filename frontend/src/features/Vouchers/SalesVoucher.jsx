@@ -123,7 +123,9 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
                   if (v.partyDetails) {
                     try {
                       savedPartyDetails = typeof v.partyDetails === 'string' ? JSON.parse(v.partyDetails) : v.partyDetails;
-                    } catch(e) {}
+                    } catch(e) {
+                      console.error('Failed to parse party details', e);
+                    }
                   }
                   setPartyDetails({ ...defaultParty, ...savedPartyDetails });
                 }

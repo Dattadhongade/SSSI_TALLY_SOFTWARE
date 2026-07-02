@@ -189,3 +189,27 @@ exports.getFinancialYears = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch financial years' });
   }
 };
+
+exports.updateCompany = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const company = await Company.findOne({
+      where: { id: req.params.id },
+      include: [{
+        model: require('../models').User,
+        where: { id: userId },
+        through: { attributes: [] }
+      }]
+    });
+    
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found or access denied' });
+    }
+    
+    await company.update(req.body);
+    res.json({ message: 'Company updated successfully', company });
+  } catch (error) {
+    console.error('Update company error:', error);
+    res.status(500).json({ message: 'Failed to update company', error: error.message });
+  }
+};
