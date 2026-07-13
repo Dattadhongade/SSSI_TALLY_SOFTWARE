@@ -86,6 +86,12 @@ export default function CompanyCreate() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      const { selectedCompany, selectCompany, selectedFinancialYear } = useStore.getState();
+      if (id && selectedCompany && selectedCompany.id === Number(id)) {
+        // Update the global state with the new company details (including logo)
+        selectCompany({ ...selectedCompany, ...formData }, selectedFinancialYear);
+      }
+
       Swal.fire({ 
         icon: 'success', 
         title: id ? 'Company Updated' : 'Company Created', 

@@ -50,6 +50,20 @@ async function seedVoucherTypes() {
       methodOfVoucherNumbering: 'Automatic',
       prefix: '',
       startingNumber: 1
+    },
+    {
+      name: 'Debit Note',
+      typeOfVoucher: 'Debit Note',
+      methodOfVoucherNumbering: 'Automatic',
+      prefix: 'SSSI/DN/26-27/',
+      startingNumber: 1
+    },
+    {
+      name: 'Credit Note',
+      typeOfVoucher: 'Credit Note',
+      methodOfVoucherNumbering: 'Automatic',
+      prefix: 'SSSI/CN/26-27/',
+      startingNumber: 1
     }
   ];
 

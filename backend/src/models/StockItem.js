@@ -9,6 +9,7 @@ const StockItem = sequelize.define('StockItem', {
   hsnSac: { type: DataTypes.STRING },
   gstRate: { type: DataTypes.DECIMAL(5, 2) }, // e.g., 18.00
   openingQuantity: { type: DataTypes.DECIMAL(15, 4), defaultValue: 0 },
+  currentStock: { type: DataTypes.DECIMAL(15, 4), defaultValue: 0 },
   openingRate: { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },
   openingValue: { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },
   purchaseRate: { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },

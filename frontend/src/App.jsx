@@ -20,12 +20,16 @@ import RegistryMonthView from './features/reports/pages/RegistryMonthView';
 import RegistryVoucherView from './features/reports/pages/RegistryVoucherView';
 import LedgerReport from './features/reports/pages/LedgerReport';
 
+import CashVoucher from './features/Vouchers/CashVoucher';
 import SalesVoucher from './features/Vouchers/SalesVoucher';
 import PurchaseVoucher from './features/Vouchers/PurchaseVoucher';
 import ReceiptVoucher from './features/Vouchers/ReceiptVoucher';
 import PaymentVoucher from './features/Vouchers/PaymentVoucher';
 import ContraVoucher from './features/Vouchers/ContraVoucher';
 import JournalVoucher from './features/Vouchers/JournalVoucher';
+import DebitNoteVoucher from './features/Vouchers/DebitNoteVoucher';
+import CreditNoteVoucher from './features/Vouchers/CreditNoteVoucher';
+import PurchaseOrderVoucher from './features/Vouchers/PurchaseOrderVoucher';
 
 import Daybook from './features/Reports/Daybook';
 import LedgerVouchers from './features/Reports/LedgerVouchers';
@@ -89,6 +93,7 @@ function App() {
             {/* Vouchers */}
             <Route path="reports/financial/balance-sheet" element={<BalanceSheet />} />
             
+            <Route path="vouchers/cash" element={<CashVoucher />} />
             <Route path="vouchers/sales" element={<SalesVoucher />} />
             <Route path="vouchers/purchase" element={<PurchaseVoucher />} />
             <Route path="vouchers/receipt" element={<ReceiptVoucher />} />
@@ -96,6 +101,9 @@ function App() {
             <Route path="vouchers/contra" element={<ContraVoucher />} />
             <Route path="vouchers/journal" element={<JournalVoucher />} />
             <Route path="vouchers/manufacturing" element={<ManufacturingJournal />} />
+            <Route path="vouchers/debit-note" element={<DebitNoteVoucher />} />
+            <Route path="vouchers/credit-note" element={<CreditNoteVoucher />} />
+            <Route path="vouchers/purchase-order" element={<PurchaseOrderVoucher />} />
             
             {/* Payroll */}
             <Route path="payroll" element={<PayrollLanding />} />

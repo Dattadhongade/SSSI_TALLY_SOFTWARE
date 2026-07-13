@@ -8,6 +8,7 @@ export default function InvoicePreview({
   dispatchDetails, 
   partyDetails, 
   items, 
+  taxItems,
   taxTotals, 
   grandTotal, 
   activeCompany,
@@ -167,7 +168,7 @@ export default function InvoicePreview({
               
               {/* Top Title & Copy Type */}
               <div className="text-center font-bold text-[15px] border-b border-black p-1 uppercase relative">
-                Tax Invoice
+                {formData.invoiceType === 'Cash' ? 'Cash Invoice' : 'Tax Invoice'}
                 <span className="absolute right-2 top-1 text-xs italic font-bold text-gray-600">{copiesTitles[copyIndex] || 'EXTRA COPY'}</span>
               </div>
               
@@ -315,7 +316,7 @@ export default function InvoicePreview({
                   <td className="w-28 h-full"></td>
                 </tr>
 
-                {items.filter(i => i.stockItemId).map((item, idx) => (
+                {items.filter(i => i.stockItemId && i.stockItemId !== 'END').map((item, idx) => (
                   <tr key={idx} className="flex w-full z-10">
                     <td className="p-1 border-r border-transparent w-10 text-center align-top">{idx + 1}</td>
                     <td className="p-1 border-r border-transparent flex-1 font-bold align-top">
@@ -334,38 +335,54 @@ export default function InvoicePreview({
                 <tr className="h-16 w-full z-10"></tr>
 
                 {/* Tax Ledgers in Grid */}
-                {taxTotals.cgst > 0 && (
-                  <tr className="flex w-full z-10">
-                    <td className="p-1 border-r border-transparent w-10"></td>
-                    <td className="p-1 border-r border-transparent flex-1 italic text-center font-bold">CGST</td>
-                    <td className="p-1 border-r border-transparent w-24"></td>
-                    <td className="p-1 border-r border-transparent w-20"></td>
-                    <td className="p-1 border-r border-transparent w-20"></td>
-                    <td className="p-1 border-r border-transparent w-12"></td>
-                    <td className="p-1 w-28 text-right font-bold">{taxTotals.cgst.toFixed(2)}</td>
-                  </tr>
-                )}
-                {taxTotals.sgst > 0 && (
-                  <tr className="flex w-full z-10">
-                    <td className="p-1 border-r border-transparent w-10"></td>
-                    <td className="p-1 border-r border-transparent flex-1 italic text-center font-bold">SGST</td>
-                    <td className="p-1 border-r border-transparent w-24"></td>
-                    <td className="p-1 border-r border-transparent w-20"></td>
-                    <td className="p-1 border-r border-transparent w-20"></td>
-                    <td className="p-1 border-r border-transparent w-12"></td>
-                    <td className="p-1 w-28 text-right font-bold">{taxTotals.sgst.toFixed(2)}</td>
-                  </tr>
-                )}
-                {taxTotals.igst > 0 && (
-                  <tr className="flex w-full z-10">
-                    <td className="p-1 border-r border-transparent w-10"></td>
-                    <td className="p-1 border-r border-transparent flex-1 italic text-center font-bold">IGST</td>
-                    <td className="p-1 border-r border-transparent w-24"></td>
-                    <td className="p-1 border-r border-transparent w-20"></td>
-                    <td className="p-1 border-r border-transparent w-20"></td>
-                    <td className="p-1 border-r border-transparent w-12"></td>
-                    <td className="p-1 w-28 text-right font-bold">{taxTotals.igst.toFixed(2)}</td>
-                  </tr>
+                {(taxItems && taxItems.length > 0) ? (
+                  taxItems.filter(t => t.ledgerId && t.ledgerId !== 'END' && Number(t.amount) > 0).map((tax, idx) => (
+                    <tr key={`tax-${idx}`} className="flex w-full z-10">
+                      <td className="p-1 border-r border-transparent w-10"></td>
+                      <td className="p-1 border-r border-transparent flex-1 italic text-center font-bold">{tax.ledgerName}</td>
+                      <td className="p-1 border-r border-transparent w-24"></td>
+                      <td className="p-1 border-r border-transparent w-20"></td>
+                      <td className="p-1 border-r border-transparent w-20"></td>
+                      <td className="p-1 border-r border-transparent w-12"></td>
+                      <td className="p-1 w-28 text-right font-bold">{Number(tax.amount).toFixed(2)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <>
+                    {taxTotals.cgst > 0 && (
+                      <tr className="flex w-full z-10">
+                        <td className="p-1 border-r border-transparent w-10"></td>
+                        <td className="p-1 border-r border-transparent flex-1 italic text-center font-bold">CGST</td>
+                        <td className="p-1 border-r border-transparent w-24"></td>
+                        <td className="p-1 border-r border-transparent w-20"></td>
+                        <td className="p-1 border-r border-transparent w-20"></td>
+                        <td className="p-1 border-r border-transparent w-12"></td>
+                        <td className="p-1 w-28 text-right font-bold">{taxTotals.cgst.toFixed(2)}</td>
+                      </tr>
+                    )}
+                    {taxTotals.sgst > 0 && (
+                      <tr className="flex w-full z-10">
+                        <td className="p-1 border-r border-transparent w-10"></td>
+                        <td className="p-1 border-r border-transparent flex-1 italic text-center font-bold">SGST</td>
+                        <td className="p-1 border-r border-transparent w-24"></td>
+                        <td className="p-1 border-r border-transparent w-20"></td>
+                        <td className="p-1 border-r border-transparent w-20"></td>
+                        <td className="p-1 border-r border-transparent w-12"></td>
+                        <td className="p-1 w-28 text-right font-bold">{taxTotals.sgst.toFixed(2)}</td>
+                      </tr>
+                    )}
+                    {taxTotals.igst > 0 && (
+                      <tr className="flex w-full z-10">
+                        <td className="p-1 border-r border-transparent w-10"></td>
+                        <td className="p-1 border-r border-transparent flex-1 italic text-center font-bold">IGST</td>
+                        <td className="p-1 border-r border-transparent w-24"></td>
+                        <td className="p-1 border-r border-transparent w-20"></td>
+                        <td className="p-1 border-r border-transparent w-20"></td>
+                        <td className="p-1 border-r border-transparent w-12"></td>
+                        <td className="p-1 w-28 text-right font-bold">{taxTotals.igst.toFixed(2)}</td>
+                      </tr>
+                    )}
+                  </>
                 )}
               </tbody>
               <tfoot className="border-t border-black font-bold">
@@ -390,53 +407,68 @@ export default function InvoicePreview({
               <div className="text-[10px] text-right italic text-[#6b7280]">E. & O.E</div>
             </div>
 
-            {/* Tax Summary Table */}
+            {/* Tax / HSN Summary Table */}
             <div className="flex-1">
               <table className="w-full text-center border-collapse">
                 <thead className="border-b border-black text-[11px] font-bold">
                   <tr>
-                    <th className="p-1 border-r border-black w-48" rowSpan="2">HSN/SAC</th>
-                    <th className="p-1 border-r border-black" rowSpan="2">Taxable<br/>Value</th>
+                    <th className="p-1 border-r border-black w-48 text-right" rowSpan="2">HSN/SAC</th>
+                    <th className={`p-1 ${formData.invoiceType === 'Cash' ? '' : 'border-r border-black'}`} rowSpan="2">
+                      {formData.invoiceType === 'Cash' ? 'Total Value' : 'Taxable Value'}
+                    </th>
                     {taxTotals.cgst > 0 && <th className="p-1 border-r border-black" colSpan="2">CGST</th>}
                     {taxTotals.sgst > 0 && <th className="p-1 border-r border-black" colSpan="2">SGST/UTGST</th>}
                     {taxTotals.igst > 0 && <th className="p-1 border-r border-black" colSpan="2">IGST</th>}
-                    <th className="p-1 w-28" rowSpan="2">Total<br/>Tax Amount</th>
+                    {formData.invoiceType !== 'Cash' && <th className="p-1 w-28" rowSpan="2">Total<br/>Tax Amount</th>}
                   </tr>
-                  <tr className="border-t border-black">
-                    {taxTotals.cgst > 0 && <><th className="p-1 border-r border-black">Rate</th><th className="p-1 border-r border-black">Amount</th></>}
-                    {taxTotals.sgst > 0 && <><th className="p-1 border-r border-black">Rate</th><th className="p-1 border-r border-black">Amount</th></>}
-                    {taxTotals.igst > 0 && <><th className="p-1 border-r border-black">Rate</th><th className="p-1 border-r border-black">Amount</th></>}
-                  </tr>
+                  {formData.invoiceType !== 'Cash' && (taxTotals.cgst > 0 || taxTotals.sgst > 0 || taxTotals.igst > 0) && (
+                    <tr className="border-t border-black">
+                      {taxTotals.cgst > 0 && <><th className="p-1 border-r border-black">Rate</th><th className="p-1 border-r border-black">Amount</th></>}
+                      {taxTotals.sgst > 0 && <><th className="p-1 border-r border-black">Rate</th><th className="p-1 border-r border-black">Amount</th></>}
+                      {taxTotals.igst > 0 && <><th className="p-1 border-r border-black">Rate</th><th className="p-1 border-r border-black">Amount</th></>}
+                    </tr>
+                  )}
                 </thead>
                 <tbody>
-                  <tr className="border-b border-black">
-                    <td className="p-1 border-r border-black text-left"></td>
-                    <td className="p-1 border-r border-black text-right">{(grandTotal - taxTotals.totalTax).toFixed(2)}</td>
-                    
-                    {taxTotals.cgst > 0 && (
-                      <>
-                        <td className="p-1 border-r border-black">9%</td>
-                        <td className="p-1 border-r border-black text-right">{taxTotals.cgst.toFixed(2)}</td>
-                      </>
-                    )}
-                    {taxTotals.sgst > 0 && (
-                      <>
-                        <td className="p-1 border-r border-black">9%</td>
-                        <td className="p-1 border-r border-black text-right">{taxTotals.sgst.toFixed(2)}</td>
-                      </>
-                    )}
-                    {taxTotals.igst > 0 && (
-                      <>
-                        <td className="p-1 border-r border-black">18%</td>
-                        <td className="p-1 border-r border-black text-right">{taxTotals.igst.toFixed(2)}</td>
-                      </>
-                    )}
-                    
-                    <td className="p-1 text-right">{taxTotals.totalTax.toFixed(2)}</td>
-                  </tr>
-                  <tr className="font-bold">
+                  {items.filter(i => i.stockItemId && i.stockItemId !== 'END').map((item, idx) => {
+                     let itemGst = item.gstRate || 0;
+                     if (itemGst === 0 && taxTotals.totalTax > 0) itemGst = 18; // Fallback for legacy items missing gstRate
+                     const itemTax = (Number(item.amount) * itemGst) / 100;
+                     const cgst = taxTotals.cgst > 0 ? itemTax / 2 : 0;
+                     const sgst = taxTotals.sgst > 0 ? itemTax / 2 : 0;
+                     const igst = taxTotals.igst > 0 ? itemTax : 0;
+                     return (
+                      <tr key={idx} className="border-b border-black">
+                        <td className="p-1 border-r border-black text-right">{item.hsnSac || ''}</td>
+                        <td className={`p-1 text-right ${formData.invoiceType === 'Cash' ? '' : 'border-r border-black'}`}>{Number(item.amount).toFixed(2)}</td>
+                        
+                        {taxTotals.cgst > 0 && (
+                          <>
+                            <td className="p-1 border-r border-black">{itemGst / 2}%</td>
+                            <td className="p-1 border-r border-black text-right">{cgst.toFixed(2)}</td>
+                          </>
+                        )}
+                        {taxTotals.sgst > 0 && (
+                          <>
+                            <td className="p-1 border-r border-black">{itemGst / 2}%</td>
+                            <td className="p-1 border-r border-black text-right">{sgst.toFixed(2)}</td>
+                          </>
+                        )}
+                        {taxTotals.igst > 0 && (
+                          <>
+                            <td className="p-1 border-r border-black">{itemGst}%</td>
+                            <td className="p-1 border-r border-black text-right">{igst.toFixed(2)}</td>
+                          </>
+                        )}
+                        
+                        {formData.invoiceType !== 'Cash' && <td className="p-1 text-right">{itemTax.toFixed(2)}</td>}
+                      </tr>
+                     )
+                  })}
+                  
+                  <tr className="font-bold border-b border-black">
                     <td className="p-1 border-r border-black text-right">Total</td>
-                    <td className="p-1 border-r border-black text-right">{(grandTotal - taxTotals.totalTax).toFixed(2)}</td>
+                    <td className={`p-1 text-right ${formData.invoiceType === 'Cash' ? '' : 'border-r border-black'}`}>{(grandTotal - taxTotals.totalTax).toFixed(2)}</td>
                     
                     {taxTotals.cgst > 0 && (
                       <>
@@ -456,16 +488,18 @@ export default function InvoicePreview({
                         <td className="p-1 border-r border-black text-right">{taxTotals.igst.toFixed(2)}</td>
                       </>
                     )}
-
-                    <td className="p-1 text-right">{taxTotals.totalTax.toFixed(2)}</td>
+                    
+                    {formData.invoiceType !== 'Cash' && <td className="p-1 text-right">{taxTotals.totalTax.toFixed(2)}</td>}
                   </tr>
                 </tbody>
-                </table>
+              </table>
             </div>
 
-            <div className="p-1 border-y border-black">
-              <div className="text-xs text-gray-600">Tax Amount (in words) : <span className="font-bold text-black italic">Indian Rupees {numberToWords(Math.floor(taxTotals.totalTax))}</span></div>
-            </div>
+            {formData.invoiceType !== 'Cash' && (
+              <div className="p-1 border-y border-black">
+                <div className="text-xs text-gray-600">Tax Amount (in words) : <span className="font-bold text-black italic">Indian Rupees {numberToWords(Math.floor(taxTotals.totalTax))}</span></div>
+              </div>
+            )}
 
             <div className="flex border-b border-black">
               <div className="w-1/2 border-r border-black p-1"></div>

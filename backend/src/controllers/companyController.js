@@ -85,6 +85,25 @@ exports.createCompany = async (req, res) => {
       });
     }
 
+    // Auto-create Default Voucher Types
+    const { VoucherType } = require('../models');
+    const defaultVoucherTypes = [
+      { name: 'Sales', typeOfVoucher: 'Sales', methodOfVoucherNumbering: 'Automatic', prefix: 'SSSI/' },
+      { name: 'Purchase', typeOfVoucher: 'Purchase', methodOfVoucherNumbering: 'Automatic', prefix: 'PUR/' },
+      { name: 'Receipt', typeOfVoucher: 'Receipt', methodOfVoucherNumbering: 'Automatic', prefix: 'REC/' },
+      { name: 'Payment', typeOfVoucher: 'Payment', methodOfVoucherNumbering: 'Automatic', prefix: 'PAY/' },
+      { name: 'Contra', typeOfVoucher: 'Contra', methodOfVoucherNumbering: 'Automatic', prefix: 'CON/' },
+      { name: 'Journal', typeOfVoucher: 'Journal', methodOfVoucherNumbering: 'Automatic', prefix: 'JRN/' }
+    ];
+    
+    for (const vt of defaultVoucherTypes) {
+      await VoucherType.create({
+        ...vt,
+        companyId: company.id,
+        userId: userId
+      });
+    }
+
     res.status(201).json({ 
       message: 'Company created successfully', 
       company,

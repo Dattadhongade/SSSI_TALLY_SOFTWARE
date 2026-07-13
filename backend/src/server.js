@@ -21,6 +21,9 @@ const gstRoutes = require('./routes/gstRoutes');
 const accountGroupRoutes = require('./routes/accountGroupRoutes');
 const stockGroupRoutes = require('./routes/stockGroupRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const masterRoutes = require('./routes/masterRoutes');
+const gstrRoutes = require('./routes/gstrRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
@@ -33,6 +36,9 @@ app.use('/api/gst', gstRoutes);
 app.use('/api/account-groups', accountGroupRoutes);
 app.use('/api/stock-groups', stockGroupRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/masters', masterRoutes);
+app.use('/api/gstr', gstrRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Error Handling Middleware Connection
 const db = require('./models');
@@ -59,3 +65,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log('\x1b[36m%s\x1b[0m', `Server running on port ${PORT}`);
 });
+// trigger restart

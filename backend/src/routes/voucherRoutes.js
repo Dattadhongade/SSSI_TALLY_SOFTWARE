@@ -12,4 +12,8 @@ router.get('/types', voucherController.getVoucherTypes);
 router.put('/:id', voucherController.updateVoucher);
 router.delete('/:id', voucherController.deleteVoucher);
 
+// Compliance routes
+router.post('/:id/generate-einvoice', voucherController.generateEInvoice);
+router.post('/:id/generate-ewaybill', voucherController.generateEwayBill);
+
 module.exports = router;

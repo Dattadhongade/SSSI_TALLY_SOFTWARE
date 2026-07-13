@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import useStore from '../../../store/useStore';
 import Swal from 'sweetalert2';
+import api from '../../../services/API';
 import { stockItemAPI } from '../../../services/stockItemAPI';
 import { handleEnterToNextField } from '../../../utils/formNavigation';
+import TallySelect from '../../../components/common/TallySelect';
 
 export default function StockItemCreate() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { setPageTitle } = useStore();
   
-  const [formData, setFormData] = useState({
+  const restoredState = location.state?.itemState;
+
+  const [formData, setFormData] = useState(restoredState || {
     name: '',
     alias: '',
     description: '',
@@ -23,28 +28,73 @@ export default function StockItemCreate() {
     openingValue: ''
   });
 
+  const [units, setUnits] = useState([]);
+  const [stockGroups, setStockGroups] = useState([]);
+
   useEffect(() => {
     setPageTitle(id ? 'Stock Item Alteration' : 'Stock Item Creation');
     let ignore = false;
 
-    async function fetchStockItem() {
+    async function fetchData() {
       try {
-        const res = await stockItemAPI.getById(id);
-        if (!ignore && res.data) setFormData(res.data);
+        const [unitsRes, groupsRes] = await Promise.all([
+          api.get('/units'),
+          api.get('/stock-groups')
+        ]);
+        if (!ignore) {
+          setUnits([{ id: '', name: 'Not Applicable' }, ...unitsRes.data.map(u => ({
+            id: String(u.id),
+            name: `${u.symbol} ${u.formalName ? '(' + u.formalName + ')' : ''}`.trim()
+          }))]);
+          
+          setStockGroups([{ id: '', name: 'Primary' }, ...groupsRes.data.map(g => ({
+            id: String(g.id),
+            name: g.name
+          }))]);
+        }
+
+        if (id) {
+          const res = await stockItemAPI.getById(id);
+          if (!ignore && res.data) setFormData(res.data);
+        }
       } catch (err) {
-        if (!ignore) console.error('Failed to fetch stock item details', err);
+        if (!ignore) console.error('Failed to fetch data', err);
       }
     }
 
-    if (id) fetchStockItem();
+    fetchData();
 
     return () => { ignore = true; };
   }, [id, setPageTitle]);
 
-
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (location.state?.returnTo) {
+          navigate(location.state.returnTo, { state: { voucherState: location.state.voucherState, focusField: location.state.focusField } });
+        } else {
+          navigate(id ? '/inventory/item/alter' : '/');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate, location, id]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (value === 'CREATE') {
+      if (name === 'stockGroupId') {
+        navigate('/inventory/group/create', { state: { returnTo: location.pathname, itemState: formData }});
+        return;
+      }
+      if (name === 'unitId') {
+        navigate('/inventory/unit/create', { state: { returnTo: location.pathname, itemState: formData }});
+        return;
+      }
+    }
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -62,7 +112,11 @@ export default function StockItemCreate() {
         timer: 1500,
         showConfirmButton: false
       });
-      navigate(id ? '/inventory/item/alter' : '/');
+      if (location.state?.returnTo) {
+        navigate(location.state.returnTo, { state: { voucherState: location.state.voucherState, focusField: location.state.focusField } });
+      } else {
+        navigate(id ? '/inventory/item/alter' : '/');
+      }
     } catch (err) {
       console.error(err);
       Swal.fire({
@@ -106,25 +160,23 @@ export default function StockItemCreate() {
             <div className="space-y-2">
               <div className="flex items-center">
                 <label className="w-1/2 text-xs font-semibold text-tally-blue">Under</label>
-                <select 
+                <TallySelect 
                   name="stockGroupId" value={formData.stockGroupId} onChange={handleChange}
-                  className="w-1/2 border-b border-tally-border focus:outline-none focus:border-tally-yellow px-1 py-0.5 text-sm bg-transparent" 
-                >
-                  <option value="">Primary</option>
-                  <option value="1">Raw Materials</option>
-                  <option value="2">Finished Goods</option>
-                </select>
+                  options={stockGroups}
+                  createOption={{ label: "Create New Group..." }}
+                  placeholder="Primary"
+                  className="w-1/2 border-b border-tally-border px-1 py-0.5 text-sm" 
+                />
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center mt-2">
                 <label className="w-1/2 text-xs font-semibold text-tally-blue">Units</label>
-                <select 
+                <TallySelect 
                   name="unitId" value={formData.unitId} onChange={handleChange}
-                  className="w-1/2 border-b border-tally-border focus:outline-none focus:border-tally-yellow px-1 py-0.5 text-sm bg-transparent" 
-                >
-                  <option value="">Not Applicable</option>
-                  <option value="1">PCS (Pieces)</option>
-                  <option value="2">KG (Kilograms)</option>
-                </select>
+                  options={units}
+                  createOption={{ label: "Create New Unit..." }}
+                  placeholder="Not Applicable"
+                  className="w-1/2 border-b border-tally-border px-1 py-0.5 text-sm" 
+                />
               </div>
             </div>
 

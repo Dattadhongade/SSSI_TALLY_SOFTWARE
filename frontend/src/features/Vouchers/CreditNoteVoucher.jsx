@@ -10,7 +10,7 @@ import { calculateGST, generateSalesEntries, isIntraState } from '../../utils/ac
 import InvoicePreview from './components/InvoicePreview';
 import TallySelect from '../../components/common/TallySelect';
 
-export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId, onDownloadComplete }) {
+export default function CreditNoteVoucher({ downloadVoucherId: propDownloadVoucherId, onDownloadComplete }) {
   const { setPageTitle, selectedCompany } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -74,28 +74,28 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
     const fetchData = async () => {
       try {
         const [ledgersRes, itemsRes, unitsRes, vouchersRes, groupsRes] = await Promise.all([
-          api.get('/ledgers').catch(() => ({ data: [] })),
-          api.get('/stockitems').catch(() => ({ data: [] })),
-          api.get('/units').catch(() => ({ data: [] })),
-          voucherAPI.getAll().catch(() => ({ data: [] })),
+          api.get('/ledgers'),
+          api.get('/stockitems'),
+          api.get('/units'),
+          voucherAPI.getAll(),
           api.get('/account-groups').catch(() => ({ data: [] }))
         ]);
 
         const groups = groupsRes.data || [];
-        const enrichedLedgers = (ledgersRes.data || []).map(l => {
+        const enrichedLedgers = ledgersRes.data.map(l => {
           const group = groups.find(g => g.id === l.groupId);
           return { ...l, parentGroup: group ? group.name : '' };
         });
 
         setLedgers(enrichedLedgers);
-        setStockItems(itemsRes.data || []);
-        setUnits(unitsRes.data || []);
+        setStockItems(itemsRes.data);
+        setUnits(unitsRes.data);
 
-        // Fetch voucher types to find Sales
-        const typesRes = await voucherAPI.getTypes().catch(() => ({ data: [] }));
-        const salesType = (typesRes.data || []).find(t => t.name === 'Sales');
+        // Fetch voucher types to find Credit Note
+        const typesRes = await voucherAPI.getTypes();
+        const type = typesRes.data.find(v => v.name === 'Credit Note');
 
-        if (salesType) {
+        if (type) {
           if (restoredState) {
             // State is already restored from navigation, no need to overwrite
           } else if (activeVoucherId) {
@@ -178,29 +178,29 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
             const endYear = String(startYear + 1).slice(-2);
             const financialYear = `${startYear}-${endYear}`;
 
-            const salesCount = vouchersRes.data.filter(v => v.voucherTypeId === salesType.id).length;
+            const salesCount = vouchersRes.data.filter(v => v.voucherTypeId === type.id).length;
             const nextNum = String(salesCount + 1).padStart(5, '0');
-            const generatedVoucherNumber = `SSSI/${financialYear}/${nextNum}`;
+            const generatedVoucherNumber = `CN/${financialYear}/${nextNum}`;
 
-            setFormData(prev => ({ ...prev, voucherTypeId: salesType.id, voucherNumber: generatedVoucherNumber }));
+            setFormData(prev => ({ ...prev, voucherTypeId: type.id, voucherNumber: generatedVoucherNumber }));
           }
         } else {
           // Fallback if VoucherType is missing
-          console.warn("Sales Voucher Type not found in DB! Using fallback.");
+          console.warn("Credit Note Voucher Type not found in DB! Using fallback.");
           const currentYear = new Date().getFullYear();
           const currentMonth = new Date().getMonth() + 1;
           const startYear = currentMonth >= 4 ? currentYear : currentYear - 1;
           const endYear = String(startYear + 1).slice(-2);
           const financialYear = `${startYear}-${endYear}`;
 
-          const salesCount = vouchersRes.data.filter(v => v.voucherNumber?.includes('SSSI')).length;
+          const salesCount = vouchersRes.data.filter(v => v.voucherNumber?.includes('CN')).length;
           const nextNum = String(salesCount + 1).padStart(5, '0');
-          setFormData(prev => ({ ...prev, voucherTypeId: 1, voucherNumber: `SSSI/${financialYear}/${nextNum}` }));
+          setFormData(prev => ({ ...prev, voucherTypeId: 1, voucherNumber: `CN/${financialYear}/${nextNum}` }));
         }
       } catch (err) {
         console.error('Failed to fetch data', err);
         // Emergency Fallback so UI is not stuck
-        setFormData(prev => ({ ...prev, voucherNumber: `SSSI/ERR/00001` }));
+        setFormData(prev => ({ ...prev, voucherNumber: `CN/ERR/00001` }));
       }
     }
 
@@ -230,7 +230,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
 
         e.preventDefault();
         if (isEditMode) {
-          navigate('/reports/account-book/sales-module');
+          navigate('/reports/account-book/credit-note');
         } else if (location.state?.returnTo) {
           navigate(location.state.returnTo);
         } else {
@@ -414,9 +414,6 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
   useEffect(() => {
     const taxByRate = {};
     let totalTax = 0;
-    let totalCgst = 0;
-    let totalSgst = 0;
-    let totalIgst = 0;
 
     const companyState = activeCompany ? activeCompany.state : '';
     const partyState = partyDetails.placeOfSupply || partyDetails.state || '';
@@ -433,15 +430,12 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
         taxByRate[rate].cgst += tax.cgstAmount;
         taxByRate[rate].sgst += tax.sgstAmount;
         taxByRate[rate].igst += tax.igstAmount;
-        totalCgst += tax.cgstAmount;
-        totalSgst += tax.sgstAmount;
-        totalIgst += tax.igstAmount;
         totalTax += tax.cgstAmount + tax.sgstAmount + tax.igstAmount;
       }
     });
 
     setTimeout(() => {
-      setTaxTotals({ cgst: totalCgst, sgst: totalSgst, igst: totalIgst, totalTax });
+      setTaxTotals({ totalTax });
 
       // Auto-update or add tax items for CGST/SGST/IGST
       setTaxItems(prev => {
@@ -580,7 +574,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
   const handleConfirmSave = async () => {
     // Show SweetAlert confirmation
     const result = await Swal.fire({
-      title: 'Confirm Create Sales Voucher?',
+      title: 'Confirm Create Credit Note?',
       text: "You won't be able to revert this!",
       icon: 'warning',
       showCancelButton: true,
@@ -652,11 +646,11 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
         window.print();
 
         setTimeout(() => {
-          Swal.fire({ icon: 'success', title: 'Saved & Printed', text: `Sales Voucher ${isEditMode ? 'updated' : 'created'}!`, timer: 1500, showConfirmButton: false });
+          Swal.fire({ icon: 'success', title: 'Saved', text: `Credit Note ${formData.voucherNumber} ${isEditMode ? 'updated' : 'created'}!`, timer: 1500, showConfirmButton: false });
         }, 500);
 
         if (isEditMode) {
-          navigate('/reports/account-book/sales-module');
+          navigate('/reports/account-book/credit-note');
           return;
         }
 
@@ -695,7 +689,6 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
         dispatchDetails={dispatchDetails}
         partyDetails={partyDetails}
         items={items}
-        taxItems={taxItems}
         taxTotals={taxTotals}
         grandTotal={grandTotal}
         activeCompany={activeCompany}
@@ -707,7 +700,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
           if (isDownloadMode) {
             if (onDownloadComplete) onDownloadComplete();
           } else if (isViewMode) {
-            navigate('/reports/account-book/sales-module');
+            navigate('/reports/account-book/credit-note');
           }
         }}
       />
@@ -819,7 +812,7 @@ export default function SalesVoucher({ downloadVoucherId: propDownloadVoucherId,
         {/* Header */}
         <div className="bg-[#f0f6fa] border-b border-tally-border px-4 py-2 flex justify-between items-center">
           <div className="flex items-center gap-6">
-            <div className="font-bold text-xl text-tally-blue">Sales</div>
+            <div className="font-bold text-xl text-tally-blue">Credit Note</div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-tally-blue">No.</span>
               <input

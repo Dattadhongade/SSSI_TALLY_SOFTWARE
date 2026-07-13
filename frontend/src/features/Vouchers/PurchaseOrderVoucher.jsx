@@ -10,7 +10,7 @@ import { calculateGST, generatePurchaseEntries, isIntraState } from '../../utils
 import TallySelect from '../../components/common/TallySelect';
 import InvoicePreview from './components/InvoicePreview';
 
-export default function PurchaseVoucher() {
+export default function PurchaseOrderVoucher() {
   const navigate = useNavigate();
   const location = useLocation();
   const editVoucherId = location.state?.editVoucherId;
@@ -71,18 +71,18 @@ export default function PurchaseVoucher() {
     async function fetchData() {
       try {
         const [ledgersRes, itemsRes, unitsRes, vTypesRes, vouchersRes] = await Promise.all([
-          api.get('/ledgers').catch(() => ({ data: [] })),
-          api.get('/stockitems').catch(() => ({ data: [] })),
-          api.get('/units').catch(() => ({ data: [] })),
-          voucherAPI.getTypes().catch(() => ({ data: [] })),
-          api.get('/vouchers').catch(() => ({ data: [] }))
+          api.get('/ledgers'),
+          api.get('/stockitems'),
+          api.get('/units'),
+          voucherAPI.getTypes(),
+          api.get('/vouchers')
         ]);
         
-        setLedgers(ledgersRes.data || []);
-        setStockItems(itemsRes.data || []);
-        setUnits(unitsRes.data || []);
+        setLedgers(ledgersRes.data);
+        setStockItems(itemsRes.data);
+        setUnits(unitsRes.data);
         
-        const type = (vTypesRes.data || []).find(v => v.name === 'Purchase');
+        const type = vTypesRes.data.find(v => v.name === 'Purchase Order');
         if (type) {
           if (restoredState) {
             // State is already restored from navigation, no need to overwrite
@@ -131,33 +131,15 @@ export default function PurchaseVoucher() {
               }
             }
           } else {
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth() + 1;
-            const startYear = currentMonth >= 4 ? currentYear : currentYear - 1;
-            const endYear = String(startYear + 1).slice(-2);
-            const financialYear = `${startYear}-${endYear}`;
-
-            const allVouchers = vouchersRes.data || [];
-            const typeCount = allVouchers.filter(v => v.voucherTypeId === type.id).length;
+            const typeCount = vouchersRes.data.filter(v => v.voucherTypeId === type.id).length;
             const nextNum = String(typeCount + 1).padStart(5, '0');
-            const generatedVoucherNumber = `SSSI/${financialYear}/${nextNum}`;
+            const generatedVoucherNumber = `SSSI/2026-27/${nextNum}`;
             
             setFormData(prev => ({ ...prev, voucherTypeId: type.id, voucherNumber: generatedVoucherNumber }));
           }
-        } else {
-          const currentYear = new Date().getFullYear();
-          const currentMonth = new Date().getMonth() + 1;
-          const startYear = currentMonth >= 4 ? currentYear : currentYear - 1;
-          const endYear = String(startYear + 1).slice(-2);
-          const financialYear = `${startYear}-${endYear}`;
-          const allVouchers = vouchersRes.data || [];
-          const purchaseCount = allVouchers.filter(v => v.voucherNumber?.includes(`PUR/${financialYear}/`)).length;
-          const nextNum = String(purchaseCount + 1).padStart(5, '0');
-          setFormData(prev => ({ ...prev, voucherTypeId: 2, voucherNumber: `PUR/${financialYear}/${nextNum}` }));
         }
       } catch (err) {
         console.error('Failed to fetch data', err);
-        setFormData(prev => ({ ...prev, voucherNumber: 'PUR/ERR/00001' }));
       }
     }
 
@@ -174,7 +156,7 @@ export default function PurchaseVoucher() {
 
         e.preventDefault();
         if (isViewMode || location.state?.editVoucherId) {
-          navigate('/reports/account-book/purchase-module');
+          navigate('/reports/account-book/purchase-order');
         } else if (location.state?.returnTo) {
           navigate(location.state.returnTo);
         } else {
@@ -329,9 +311,6 @@ export default function PurchaseVoucher() {
     const taxByRate = {};
     let totalTax = 0;
     let totalTaxable = 0;
-    let totalCgst = 0;
-    let totalSgst = 0;
-    let totalIgst = 0;
 
     const companyState = activeCompany ? activeCompany.state : '';
     const partyState = partyDetails.placeOfSupply || partyDetails.state || '';
@@ -359,9 +338,6 @@ export default function PurchaseVoucher() {
            taxByRate[rate].cgst += tax.cgstAmount;
            taxByRate[rate].sgst += tax.sgstAmount;
            taxByRate[rate].igst += tax.igstAmount;
-           totalCgst += tax.cgstAmount;
-           totalSgst += tax.sgstAmount;
-           totalIgst += tax.igstAmount;
            totalTax += tax.cgstAmount + tax.sgstAmount + tax.igstAmount;
         }
       }
@@ -369,7 +345,7 @@ export default function PurchaseVoucher() {
 
     setTimeout(() => {
       setGrandTotal(totalTaxable + totalTax);
-      setTaxTotals({ cgst: totalCgst, sgst: totalSgst, igst: totalIgst, totalTax });
+      setTaxTotals({ totalTax });
 
       setTaxItems(prev => {
         let changed = false;
@@ -537,10 +513,10 @@ export default function PurchaseVoucher() {
         await voucherAPI.create(payload);
       }
       
-      Swal.fire({ icon: 'success', title: 'Saved', text: `Purchase Voucher ${formData.voucherNumber} ${isEditMode ? 'updated' : 'created'}!`, timer: 1500, showConfirmButton: false });
+      Swal.fire({ icon: 'success', title: 'Saved', text: `Purchase Order ${formData.voucherNumber} ${isEditMode ? 'updated' : 'created'}!`, timer: 1500, showConfirmButton: false });
       
       if (isEditMode) {
-        navigate('/reports/account-book/purchase-module');
+        navigate('/reports/account-book/purchase-order');
         return;
       }
       
@@ -562,7 +538,6 @@ export default function PurchaseVoucher() {
         dispatchDetails={receiptDetails}
         partyDetails={partyDetails}
         items={items}
-        taxItems={taxItems}
         taxTotals={taxTotals}
         grandTotal={grandTotal}
         activeCompany={activeCompany}
@@ -572,7 +547,7 @@ export default function PurchaseVoucher() {
         onCancel={() => {
           setShowPreview(false);
           if (isViewMode) {
-             navigate('/reports/account-book/purchase-module');
+             navigate('/reports/account-book/purchase-order');
           }
         }}
       />
@@ -665,7 +640,7 @@ export default function PurchaseVoucher() {
         {/* Header */}
         <div className="bg-[#f0f6fa] border-b border-tally-border px-4 py-2 flex justify-between items-center">
           <div className="flex items-center gap-6">
-            <div className="font-bold text-xl text-tally-blue">Purchase</div>
+            <div className="font-bold text-xl text-tally-blue">Purchase Order</div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-tally-blue">No.</span>
               <input 

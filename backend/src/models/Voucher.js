@@ -8,6 +8,7 @@ const Voucher = sequelize.define('Voucher', {
   narration: { type: DataTypes.TEXT },
   totalAmount: { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },
   // GST & Compliance
+  invoiceType: { type: DataTypes.STRING, defaultValue: 'B2B' },
   placeOfSupply: { type: DataTypes.STRING },
   isReverseCharge: { type: DataTypes.BOOLEAN, defaultValue: false },
   // JSON Blobs

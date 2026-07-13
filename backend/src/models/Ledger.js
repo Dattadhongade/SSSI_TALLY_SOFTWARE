@@ -17,6 +17,8 @@ const Ledger = sequelize.define('Ledger', {
   state: { type: DataTypes.STRING },
   country: { type: DataTypes.STRING },
   pincode: { type: DataTypes.STRING },
+  email: { type: DataTypes.STRING },
+  phone: { type: DataTypes.STRING },
   // Banking Details
   provideBankDetails: { type: DataTypes.BOOLEAN, defaultValue: false },
   bankAccountHolder: { type: DataTypes.STRING },

@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import useStore from '../../../store/useStore';
 import Swal from 'sweetalert2';
+import api from '../../../services/API';
 import { ledgerAPI } from '../../../services/ledgerAPI';
 import { handleEnterToNextField } from '../../../utils/formNavigation';
+import TallySelect from '../../../components/common/TallySelect';
 
 export default function LedgerCreate() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { setPageTitle } = useStore();
   
-  const [formData, setFormData] = useState({
+  const restoredState = location.state?.ledgerState;
+
+  const [formData, setFormData] = useState(restoredState || {
     name: '',
     alias: '',
     groupId: '', // Ideally a select dropdown for Groups
@@ -19,6 +24,7 @@ export default function LedgerCreate() {
     state: '',
     country: 'India',
     pincode: '',
+    email: '',
     provideBankDetails: false,
     bankAccountHolder: '',
     bankName: '',
@@ -31,28 +37,59 @@ export default function LedgerCreate() {
     balanceType: 'Dr'
   });
 
+  const [accountGroups, setAccountGroups] = useState([]);
+
   useEffect(() => {
     setPageTitle(id ? 'Ledger Alteration' : 'Ledger Creation');
     let ignore = false;
 
-    async function fetchLedger() {
+    async function fetchData() {
       try {
-        const res = await ledgerAPI.getById(id);
-        if (!ignore && res.data) setFormData(res.data);
+        const groupsRes = await api.get('/account-groups');
+        if (!ignore) {
+          setAccountGroups([{ id: '', name: 'Select Group...' }, ...groupsRes.data.map(g => ({
+            id: String(g.id),
+            name: g.name
+          }))]);
+        }
+
+        if (id) {
+          const res = await ledgerAPI.getById(id);
+          if (!ignore && res.data) setFormData(res.data);
+        }
       } catch (err) {
-        if (!ignore) console.error('Failed to fetch ledger details', err);
+        if (!ignore) console.error('Failed to fetch data', err);
       }
     }
 
-    if (id) fetchLedger();
+    fetchData();
 
     return () => { ignore = true; };
   }, [id, setPageTitle]);
 
-
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (location.state?.returnTo) {
+          navigate(location.state.returnTo, { state: { voucherState: location.state.voucherState, focusField: location.state.focusField } });
+        } else {
+          navigate(id ? '/masters/ledger/alter' : '/');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate, location, id]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (value === 'CREATE') {
+      if (name === 'groupId') {
+        navigate('/masters/group/create', { state: { returnTo: location.pathname, ledgerState: formData }});
+        return;
+      }
+    }
     setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
   };
 
@@ -71,7 +108,11 @@ export default function LedgerCreate() {
         timer: 1500,
         showConfirmButton: false
       });
-      navigate(id ? '/masters/ledger/alter' : '/');
+      if (location.state?.returnTo) {
+        navigate(location.state.returnTo, { state: { voucherState: location.state.voucherState, focusField: location.state.focusField } });
+      } else {
+        navigate(id ? '/masters/ledger/alter' : '/');
+      }
     } catch (err) {
       console.error(err);
       Swal.fire({
@@ -105,18 +146,13 @@ export default function LedgerCreate() {
             </div>
             <div className="flex items-center mt-4 pt-4 border-t border-tally-border">
               <label className="w-1/3 text-xs font-semibold text-tally-blue">Under</label>
-              <select 
+              <TallySelect 
                 name="groupId" value={formData.groupId} onChange={handleChange}
-                className="w-2/3 border-b border-tally-border focus:outline-none focus:border-tally-yellow px-1 py-0.5 text-sm bg-transparent" 
-              >
-                <option value="">Select Group...</option>
-                <option value="1">Sundry Debtors</option>
-                <option value="2">Sundry Creditors</option>
-                <option value="3">Bank Accounts</option>
-                <option value="4">Sales Accounts</option>
-                <option value="5">Purchase Accounts</option>
-                {/* Dynamically load from DB later */}
-              </select>
+                options={accountGroups}
+                createOption={{ label: "Create New Group..." }}
+                placeholder="Select Group..."
+                className="w-2/3 border-b border-tally-border px-1 py-0.5 text-sm" 
+              />
             </div>
           </div>
 

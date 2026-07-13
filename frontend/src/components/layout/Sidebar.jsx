@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { 
-  Building2, Database, FileText, FolderOpen, ShieldCheck, ChevronDown, ChevronRight, LogOut
+  Building2, Database, FileText, FolderOpen, ShieldCheck, ChevronDown, ChevronRight, LogOut, Landmark
 } from 'lucide-react';
 
 
@@ -45,6 +45,7 @@ import {
       name: 'Vouchers', 
       icon: FileText,
       subItems: [
+        { name: 'Cash', path: '/vouchers/cash' },
         { name: 'Contra', path: '/vouchers/contra', shortcut: 'F4' },
         { name: 'Payment', path: '/vouchers/payment', shortcut: 'F5' },
         { name: 'Receipt (F6)', path: '/vouchers/receipt', shortcut: 'F6' },
@@ -81,6 +82,13 @@ import {
         { name: 'GSTR-1', path: '/reports/gst/gstr1' },
         { name: 'GSTR-2', path: '/reports/gst/gstr2' },
         { name: 'GSTR-3B', path: '/reports/gst/gstr3b' },
+      ]
+    },
+    { 
+      name: 'Banking', 
+      icon: Landmark,
+      subItems: [
+        { name: 'Bank Reconciliation', path: '/banking/reconciliation' },
       ]
     }
   ];

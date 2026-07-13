@@ -18,6 +18,13 @@ const CostCenter = require('./CostCenter');
 const Employee = require('./Employee');
 const Payhead = require('./Payhead');
 
+const TaxMaster = require('./TaxMaster');
+const HSNMaster = require('./HSNMaster');
+const Transporter = require('./Transporter');
+const VehicleMaster = require('./VehicleMaster');
+const EInvoice = require('./EInvoice');
+const EwayBill = require('./EwayBill');
+
 // --- Associations ---
 
 // Many-to-Many: Users <-> Companies
@@ -44,7 +51,7 @@ const addCommonFKs = (Model) => {
 };
 
 // Apply common FKs to masters and transactions
-const tables = [AccountGroup, Ledger, Unit, Currency, StockGroup, StockItem, VoucherType, Voucher, VoucherEntry, VoucherInventory, CostCenter, Employee, Payhead];
+const tables = [AccountGroup, Ledger, Unit, Currency, StockGroup, StockItem, VoucherType, Voucher, VoucherEntry, VoucherInventory, CostCenter, Employee, Payhead, TaxMaster, HSNMaster, Transporter, VehicleMaster, EInvoice, EwayBill];
 tables.forEach(addCommonFKs);
 
 // AccountGroup Hierarchy
@@ -84,6 +91,13 @@ VoucherInventory.belongsTo(Voucher, { foreignKey: 'voucherId' });
 StockItem.hasMany(VoucherInventory, { foreignKey: 'stockItemId' });
 VoucherInventory.belongsTo(StockItem, { foreignKey: 'stockItemId' });
 
+// E-Invoice & E-Way Bill
+Voucher.hasOne(EInvoice, { foreignKey: 'voucherId' });
+EInvoice.belongsTo(Voucher, { foreignKey: 'voucherId' });
+
+Voucher.hasOne(EwayBill, { foreignKey: 'voucherId' });
+EwayBill.belongsTo(Voucher, { foreignKey: 'voucherId' });
+
 module.exports = {
   sequelize,
   User,
@@ -102,5 +116,11 @@ module.exports = {
   VoucherInventory,
   CostCenter,
   Employee,
-  Payhead
+  Payhead,
+  TaxMaster,
+  HSNMaster,
+  Transporter,
+  VehicleMaster,
+  EInvoice,
+  EwayBill
 };
